@@ -152,6 +152,16 @@
   .def-popup .dp-close{ position:absolute; top:8px; right:10px; background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:2px 6px; line-height:1; }
   .def-popup .dp-loading{ color: var(--muted); font-style: italic; }
 
+  .install-btn{ display:inline-flex; align-items:center; gap:8px; background: var(--surface-2); color: var(--text); border: 1px solid var(--crimson-dim); padding: 10px 16px; font-size: 12px; border-radius: 5px; margin-bottom: 20px; }
+  .install-btn:hover{ border-color: var(--crimson); background: var(--crimson-dim); }
+  .install-modal{ position:fixed; inset:0; background: rgba(0,0,0,0.7); z-index: 1300; display:none; align-items:center; justify-content:center; padding: 20px; }
+  .install-modal.show{ display:flex; }
+  .install-modal-box{ position:relative; background: var(--surface); border: 1px solid var(--crimson-dim); border-radius: 8px; padding: 26px 22px 22px; max-width: 380px; width:100%; font-family:'Inter', sans-serif; font-size: 14px; line-height:1.6; color: var(--text); }
+  .install-modal-box h4{ font-family:'Oswald', sans-serif; text-transform: uppercase; letter-spacing:0.03em; color: var(--crimson); margin: 0 0 14px; font-size: 18px; }
+  .install-modal-box ol{ margin: 0; padding-left: 20px; }
+  .install-modal-box li{ margin-bottom: 10px; }
+  .install-modal-box .im-icon{ font-family:'JetBrains Mono', monospace; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 7px; font-size:12px; }
+
   .hint{ font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); padding: 12px 16px 18px; letter-spacing: 0.02em; border-top: 1px solid var(--line); }
   .hint kbd{ background: var(--surface-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--text); }
 </style>
@@ -161,6 +171,7 @@
   <div class="eyebrow">LOOP TRAINER</div>
   <h1>REPE<span>TE</span>.</h1>
   <div class="sub">Cole um link, ou suba um áudio/vídeo do aparelho. Toca em blocos fixos, em loop, até você mandar avançar.</div>
+  <button class="install-btn" id="installBtn" style="display:none;">📲 Instalar no celular</button>
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="youtube">YouTube</button>
@@ -294,6 +305,12 @@
   <button class="dp-close" id="defPopupClose">✕</button>
   <div id="defPopupBody"></div>
 </div>
+<div class="install-modal" id="installModal">
+  <div class="install-modal-box">
+    <button class="dp-close" id="installModalClose">✕</button>
+    <div id="installModalBody"></div>
+  </div>
+</div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
@@ -346,16 +363,42 @@ function extractVideoId(input){
 }
 function onYouTubeIframeAPIReady(){ apiReady = true; if(pendingVideoId) startYtPlayer(pendingVideoId); }
 
-document.getElementById('loadYtBtn').addEventListener('click', () => {
+function loadYoutubeVideo(raw, blockSecondsInput){
   document.getElementById('ytError').classList.remove('show');
-  const raw = document.getElementById('urlInput').value;
   const id = extractVideoId(raw);
-  blockSeconds = parseInt(document.getElementById('blockSizeYt').value, 10) || 10;
+  blockSeconds = parseInt(blockSecondsInput, 10) || 10;
   if(!id){ alert('Não consegui identificar o vídeo nesse link.'); return; }
+  document.getElementById('urlInput').value = raw;
+  document.getElementById('blockSizeYt').value = blockSeconds;
   resetForNewSource(id);
   showFrame('yt');
+  localDB.set('lastSource', JSON.stringify({ mode: 'youtube', url: raw, blockSeconds }), false).catch(()=>{});
   if(!apiReady){ pendingVideoId = id; } else { startYtPlayer(id); }
+}
+
+document.getElementById('loadYtBtn').addEventListener('click', () => {
+  const raw = document.getElementById('urlInput').value;
+  const blockSecondsInput = document.getElementById('blockSizeYt').value;
+  loadYoutubeVideo(raw, blockSecondsInput);
 });
+
+/* ---------- retomar última fonte após F5 ---------- */
+(async function restoreLastSource(){
+  try{
+    const res = await localDB.get('lastSource', false);
+    if(!res || !res.value) return;
+    const saved = JSON.parse(res.value);
+    if(saved.mode === 'youtube' && saved.url){
+      loadYoutubeVideo(saved.url, saved.blockSeconds || 10);
+    } else if(saved.mode === 'local-audio' && saved.name){
+      document.querySelector('.tab-btn[data-tab="audio"]').click();
+      document.getElementById('audioDropLabel').textContent = `Última vez: "${saved.name}" — toque aqui e selecione o mesmo arquivo pra continuar de onde parou`;
+    } else if(saved.mode === 'local-video' && saved.name){
+      document.querySelector('.tab-btn[data-tab="video"]').click();
+      document.getElementById('videoDropLabel').textContent = `Última vez: "${saved.name}" — toque aqui e selecione o mesmo arquivo pra continuar de onde parou`;
+    }
+  }catch(e){}
+})();
 function startYtPlayer(videoId){
   document.getElementById('playerShell').classList.add('active');
   if(ytPlayer){ ytPlayer.loadVideoById(videoId, 0); }
@@ -402,6 +445,7 @@ document.getElementById('loadAudioBtn').addEventListener('click', () => {
   const key = 'local-audio:' + safeName(selectedAudioFile);
   resetForNewSource(key);
   showFrame('audio');
+  localDB.set('lastSource', JSON.stringify({ mode: 'local-audio', name: selectedAudioFile.name, blockSeconds }), false).catch(()=>{});
   document.getElementById('audioFileName').textContent = selectedAudioFile.name;
   document.getElementById('playerShell').classList.add('active');
   if(audioEl){ audioEl.pause(); audioEl.src=''; }
@@ -439,6 +483,7 @@ document.getElementById('loadVideoBtn').addEventListener('click', () => {
   const key = 'local-video:' + safeName(selectedVideoFile);
   resetForNewSource(key);
   showFrame('video');
+  localDB.set('lastSource', JSON.stringify({ mode: 'local-video', name: selectedVideoFile.name, blockSeconds }), false).catch(()=>{});
   document.getElementById('playerShell').classList.add('active');
   videoEl = document.getElementById('localVideoEl');
   videoEl.pause(); videoEl.src = URL.createObjectURL(selectedVideoFile);
@@ -792,6 +837,60 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
+
+/* ---------- instalar no celular ---------- */
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function isIOS(){
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+const installBtn = document.getElementById('installBtn');
+const installModal = document.getElementById('installModal');
+let deferredInstallPrompt = null;
+
+if(!isStandalone()){
+  installBtn.style.display = 'inline-flex';
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if(!isStandalone()) installBtn.style.display = 'inline-flex';
+});
+window.addEventListener('appinstalled', () => {
+  installBtn.style.display = 'none';
+  deferredInstallPrompt = null;
+});
+
+installBtn.addEventListener('click', async () => {
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    if(choice && choice.outcome === 'accepted') installBtn.style.display = 'none';
+    return;
+  }
+  document.getElementById('installModalBody').innerHTML = isIOS()
+    ? `<h4>Instalar no iPhone</h4>
+       <ol>
+         <li>Abra este link no <strong>Safari</strong> (tem que ser o Safari, não funciona pelo app de outro navegador ou dentro de outro app).</li>
+         <li>Toque no ícone de compartilhar <span class="im-icon">⬆️ □</span> na barra inferior (ou superior, dependendo do modelo).</li>
+         <li>Role a lista e toque em <strong>"Adicionar à Tela de Início"</strong>.</li>
+         <li>Toque em <strong>"Adicionar"</strong> no canto superior direito.</li>
+       </ol>
+       <p style="margin-top:14px; color:var(--muted); font-size:12px;">Depois disso, o ícone REPETE aparece na sua tela inicial como qualquer outro app, abrindo em tela cheia.</p>`
+    : `<h4>Instalar no celular</h4>
+       <ol>
+         <li>Toque no menu do navegador <span class="im-icon">⋮</span> (três pontinhos, geralmente no canto superior direito).</li>
+         <li>Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.</li>
+         <li>Confirme a instalação.</li>
+       </ol>
+       <p style="margin-top:14px; color:var(--muted); font-size:12px;">O nome da opção pode variar um pouco dependendo do navegador (Chrome, Samsung Internet, etc).</p>`;
+  installModal.classList.add('show');
+});
+document.getElementById('installModalClose').addEventListener('click', () => installModal.classList.remove('show'));
+installModal.addEventListener('click', (e) => { if(e.target === installModal) installModal.classList.remove('show'); });
 </script>
 </body>
 </html>
