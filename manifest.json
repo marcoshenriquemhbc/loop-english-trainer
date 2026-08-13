@@ -1,17 +1,17 @@
 {
-  "name": "Repete — Loop Trainer",
+  "name": "REPETE — Loop Trainer",
   "short_name": "Repete",
-  "description": "Treino de listening em blocos com repetição, anotações e leitura bilíngue.",
+  "description": "Treino de escuta em loop para aprendizado de idiomas.",
   "start_url": "./index.html",
   "scope": "./",
+  "id": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0a0b",
   "theme_color": "#0a0a0b",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
