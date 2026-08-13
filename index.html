@@ -141,6 +141,16 @@
   .reading-panel{ background: var(--bg); overflow-y:auto; -webkit-overflow-scrolling:touch; padding: 20px; }
   .reading-panel h3{ font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color: var(--crimson); margin: 0 0 14px; position:sticky; top:-20px; background: var(--bg); padding: 6px 0; }
   .reading-panel p{ font-size: 18px; line-height: 1.9; color: var(--text); white-space: pre-wrap; }
+  .hw{ cursor: pointer; border-radius: 3px; padding: 0 1px; transition: background .1s ease; }
+  .hw:hover{ background: var(--crimson-dim); color:#fff; }
+  .def-popup{ position: fixed; z-index: 1200; background: var(--surface); border: 1px solid var(--crimson); border-radius: 6px; padding: 14px 16px; max-width: 300px; font-family:'Inter',sans-serif; font-size: 13px; line-height:1.5; box-shadow: 0 8px 28px rgba(0,0,0,0.55); display:none; }
+  .def-popup.show{ display:block; }
+  .def-popup .dp-word{ font-family:'JetBrains Mono', monospace; font-weight:700; color: var(--crimson); font-size:14px; margin-bottom:4px; text-transform:lowercase; padding-right: 18px; }
+  .def-popup .dp-phon{ color: var(--muted); font-size:11px; margin-bottom:8px; }
+  .def-popup .dp-def{ color: var(--text); margin-bottom:6px; }
+  .def-popup .dp-pos{ color: var(--amber); font-size:10px; text-transform:uppercase; letter-spacing:0.06em; margin-right:6px; }
+  .def-popup .dp-close{ position:absolute; top:8px; right:10px; background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:2px 6px; line-height:1; }
+  .def-popup .dp-loading{ color: var(--muted); font-style: italic; }
 
   .hint{ font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); padding: 12px 16px 18px; letter-spacing: 0.02em; border-top: 1px solid var(--line); }
   .hint kbd{ background: var(--surface-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--text); }
@@ -276,9 +286,13 @@
     </div>
   </div>
   <div class="reading-panels">
-    <div class="reading-panel"><h3>Inglês</h3><p id="readEnText"></p></div>
+    <div class="reading-panel"><h3>Inglês <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--muted); font-size:11px;">— toque/passe o mouse numa palavra pra ver o significado</span></h3><p id="readEnText"></p></div>
     <div class="reading-panel"><h3>Português</h3><p id="readPtText"></p></div>
   </div>
+</div>
+<div class="def-popup" id="defPopup">
+  <button class="dp-close" id="defPopupClose">✕</button>
+  <div id="defPopupBody"></div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -665,9 +679,91 @@ function readTextFile(file, targetTextarea, lang){
 const readingOverlay = document.getElementById('readingOverlay');
 document.getElementById('openReadingBtn').addEventListener('click', () => {
   if(!textEn.value.trim() && !textPt.value.trim()){ alert('Cole ou carregue pelo menos um dos textos antes de abrir a leitura.'); return; }
-  document.getElementById('readEnText').textContent = textEn.value || '(sem texto em inglês)';
+  renderHoverableEnglish(textEn.value);
   document.getElementById('readPtText').textContent = textPt.value || '(sem texto em português)';
   readingOverlay.classList.add('show');
+});
+
+/* ---------- hover-to-define (inglês) ---------- */
+const defCache = new Map();
+const defPopup = document.getElementById('defPopup');
+const defPopupBody = document.getElementById('defPopupBody');
+document.getElementById('defPopupClose').addEventListener('click', () => defPopup.classList.remove('show'));
+
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderHoverableEnglish(text){
+  const container = document.getElementById('readEnText');
+  if(!text || !text.trim()){ container.textContent = '(sem texto em inglês)'; return; }
+  const parts = text.split(/(\s+)/);
+  const html = parts.map(part => {
+    if(/^\s+$/.test(part) || part === '') return escapeHtml(part);
+    const cleanMatch = part.match(/[A-Za-zÀ-ÖØ-öø-ÿ']+/);
+    if(!cleanMatch) return escapeHtml(part);
+    const clean = cleanMatch[0];
+    const idx = part.indexOf(clean);
+    const lead = part.slice(0, idx), trail = part.slice(idx + clean.length);
+    return `${escapeHtml(lead)}<span class="hw" data-word="${clean.toLowerCase()}">${escapeHtml(clean)}</span>${escapeHtml(trail)}`;
+  }).join('');
+  container.innerHTML = html;
+}
+
+function positionPopup(anchorEl){
+  const rect = anchorEl.getBoundingClientRect();
+  const top = Math.min(rect.bottom + 8, window.innerHeight - 190);
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - 316));
+  defPopup.style.top = top + 'px';
+  defPopup.style.left = left + 'px';
+}
+
+function renderDefinition(word, data){
+  if(!data){ defPopupBody.innerHTML = `<div class="dp-word">${word}</div><div class="dp-def">Não encontrei esse termo — pode ser gíria, nome próprio ou expressão composta (tenta buscar só uma das palavras, se for expressão).</div>`; return; }
+  const entry = data[0];
+  const phoneticObj = (entry.phonetics || []).find(p => p.text);
+  const phonetic = entry.phonetic || (phoneticObj && phoneticObj.text) || '';
+  let html = `<div class="dp-word">${escapeHtml(entry.word)}</div>`;
+  if(phonetic) html += `<div class="dp-phon">${escapeHtml(phonetic)}</div>`;
+  (entry.meanings || []).slice(0, 2).forEach(m => {
+    const def = m.definitions && m.definitions[0];
+    if(def){
+      html += `<div class="dp-def"><span class="dp-pos">${escapeHtml(m.partOfSpeech || '')}</span>${escapeHtml(def.definition)}</div>`;
+      if(def.example) html += `<div class="dp-def" style="color:var(--muted); font-style:italic;">"${escapeHtml(def.example)}"</div>`;
+    }
+  });
+  defPopupBody.innerHTML = html;
+}
+
+async function lookupWord(word, anchorEl){
+  positionPopup(anchorEl);
+  defPopupBody.innerHTML = '<div class="dp-loading">buscando...</div>';
+  defPopup.classList.add('show');
+  if(defCache.has(word)){ renderDefinition(word, defCache.get(word)); return; }
+  try{
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+    if(!res.ok) throw new Error('not found');
+    const data = await res.json();
+    defCache.set(word, data);
+    renderDefinition(word, data);
+  }catch(e){
+    defCache.set(word, null);
+    renderDefinition(word, null);
+  }
+}
+
+const readEnTextEl = document.getElementById('readEnText');
+readEnTextEl.addEventListener('click', (e) => {
+  const target = e.target.closest('.hw');
+  if(!target) return;
+  lookupWord(target.dataset.word, target);
+});
+readEnTextEl.addEventListener('mouseover', (e) => {
+  if(window.matchMedia('(hover: none)').matches) return;
+  const target = e.target.closest('.hw');
+  if(!target) return;
+  lookupWord(target.dataset.word, target);
+});
+document.addEventListener('click', (e) => {
+  if(!defPopup.contains(e.target) && !e.target.closest('.hw')) defPopup.classList.remove('show');
 });
 document.getElementById('closeReadingBtn').addEventListener('click', () => readingOverlay.classList.remove('show'));
 document.getElementById('readPlayBtn').addEventListener('click', () => {
