@@ -97,7 +97,7 @@
   .btn-secondary[hidden]{ display:none; }
   .btn-primary{ background: var(--crimson); color: #fff; padding: 12px 26px; font-size: 14px; flex: 1 1 auto; }
   .btn-primary:hover{ filter: brightness(1.1); }
-  .speed-row{ display:flex; gap:6px; align-items:center; padding: 0 16px 18px; }
+  .speed-row{ display:flex; gap:6px; align-items:center; padding: 0 16px 18px; flex-wrap: wrap; }
   .speed-row .field-label{ margin:0 10px 0 0; }
   .speed-btn{ background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); padding: 8px 12px; font-size: 12px; font-family:'JetBrains Mono', monospace; }
   .speed-btn.active{ background: var(--crimson); color: #fff; border-color: var(--crimson); }
@@ -109,17 +109,6 @@
   #saveStatus.show{ opacity:1; }
   textarea{ width:100%; min-height: 80px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); border-radius:4px; padding:12px; font-family:'Inter',sans-serif; font-size:14px; line-height:1.5; resize: vertical; outline:none; }
   textarea:focus{ border-color: var(--crimson); }
-
-  .transcript-section{ border-top: 1px solid var(--line); padding: 16px; }
-  .reveal-btn{ background: var(--surface-2); color: var(--amber); border: 1px solid var(--amber-dim); padding: 10px 16px; font-size: 12px; margin-top: 10px; }
-  .reveal-btn:hover{ background: var(--amber-dim); }
-  .diff-output{ margin-top: 14px; display:none; }
-  .diff-output.show{ display:block; }
-  .diff-line{ font-family:'Inter', sans-serif; font-size: 14px; line-height:1.7; padding: 10px 12px; background: var(--surface-2); border-radius:4px; margin-bottom:8px; }
-  .diff-line .lbl{ display:block; font-family:'JetBrains Mono', monospace; font-size:9px; color: var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px; }
-  .w-match{ color: var(--text); }
-  .w-extra{ color: var(--crimson); text-decoration: line-through; opacity:0.85; }
-  .w-missing{ color: var(--amber); font-weight:600; border-bottom: 2px solid var(--amber); }
 
   /* ---- leitura bilíngue ---- */
   .bilingual-section{ border-top: 1px solid var(--line); padding: 16px; }
@@ -246,24 +235,22 @@
 
     <div class="speed-row">
       <span class="field-label">Velocidade</span>
+      <button class="speed-btn" data-rate="0.25">0.25x</button>
       <button class="speed-btn" data-rate="0.5">0.5x</button>
+      <button class="speed-btn" data-rate="0.6">0.6x</button>
       <button class="speed-btn" data-rate="0.75">0.75x</button>
+      <button class="speed-btn" data-rate="0.85">0.85x</button>
       <button class="speed-btn active" data-rate="1">1x</button>
+      <button class="speed-btn" data-rate="1.1">1.1x</button>
+      <button class="speed-btn" data-rate="1.25">1.25x</button>
+      <button class="speed-btn" data-rate="1.5">1.5x</button>
+      <button class="speed-btn" data-rate="1.75">1.75x</button>
+      <button class="speed-btn" data-rate="2">2x</button>
     </div>
 
     <div class="notes-section">
       <div class="notes-header"><span class="field-label">O que você entendeu neste bloco</span><span id="saveStatus">salvo</span></div>
       <textarea id="noteBox" placeholder="Escreva aqui o que você entendeu ouvindo este bloco..."></textarea>
-    </div>
-
-    <div class="transcript-section">
-      <span class="field-label">Transcrição real deste bloco (cole aqui, opcional)</span>
-      <textarea id="transcriptBox" placeholder="Cole a transcrição correta deste trecho"></textarea>
-      <button class="reveal-btn" id="revealBtn">Revelar e comparar</button>
-      <div class="diff-output" id="diffOutput">
-        <div class="diff-line"><span class="lbl">Sua versão</span><div id="diffUser"></div></div>
-        <div class="diff-line"><span class="lbl">Transcrição real</span><div id="diffReal"></div></div>
-      </div>
     </div>
 
     <div class="bilingual-section">
@@ -338,7 +325,7 @@ let blockSeconds = 10, currentBlock = 0, totalBlocks = 0, duration = 0;
 let loopInterval = null;
 let visited = new Set(), notesWithContent = new Set();
 let currentKey = null, currentRate = 1;
-let saveDebounce = null, transcriptDebounce = null, enDebounce = null, ptDebounce = null;
+let saveDebounce = null, enDebounce = null, ptDebounce = null;
 let savedStudySeconds = 0, sessionSeconds = 0, lastFlush = 0;
 
 /* ---------- tabs ---------- */
@@ -516,7 +503,6 @@ function fmt(sec){ sec = Math.max(0, Math.round(sec)); const m = Math.floor(sec/
 function resetForNewSource(key){
   currentBlock = 0; visited.clear(); notesWithContent.clear();
   currentKey = key; savedStudySeconds = 0; sessionSeconds = 0; duration = 0;
-  document.getElementById('diffOutput').classList.remove('show');
   document.getElementById('statGlobal').style.display = 'none';
   document.getElementById('globalTotalBtn').style.display = 'inline';
 }
@@ -586,13 +572,8 @@ async function saveNote(index, text){
   }catch(e){}
 }
 async function loadNote(index){ try{ const res = await localDB.get(`notes:${currentKey}:${index}`, false); return res && res.value ? res.value : ''; }catch(e){ return ''; } }
-async function saveTranscript(index, text){
-  try{ if(text && text.trim()) await localDB.set(`transcript:${currentKey}:${index}`, text, false); else await localDB.delete(`transcript:${currentKey}:${index}`, false); }catch(e){}
-}
-async function loadTranscript(index){ try{ const res = await localDB.get(`transcript:${currentKey}:${index}`, false); return res && res.value ? res.value : ''; }catch(e){ return ''; } }
 
 function flushCurrentNote(){ const box = document.getElementById('noteBox'); if(saveDebounce) clearTimeout(saveDebounce); saveNote(currentBlock, box.value); }
-function flushCurrentTranscript(){ const box = document.getElementById('transcriptBox'); if(transcriptDebounce) clearTimeout(transcriptDebounce); saveTranscript(currentBlock, box.value); }
 async function flushStudyTime(){
   if(sessionSeconds <= 0) return;
   savedStudySeconds += sessionSeconds; sessionSeconds = 0;
@@ -600,7 +581,7 @@ async function flushStudyTime(){
 }
 
 async function seekToBlock(index, play){
-  flushCurrentNote(); flushCurrentTranscript(); await flushStudyTime();
+  flushCurrentNote(); await flushStudyTime();
   currentBlock = Math.max(0, Math.min(index, totalBlocks - 1));
   visited.add(currentBlock);
   const start = currentBlock * blockSeconds;
@@ -609,10 +590,8 @@ async function seekToBlock(index, play){
   document.getElementById('blockIndex').textContent = currentBlock + 1;
   document.getElementById('tStart').textContent = fmt(start);
   document.getElementById('tEnd').textContent = fmt(Math.min(start + blockSeconds, duration));
-  document.getElementById('diffOutput').classList.remove('show');
   refreshTimelineHighlight(); refreshTimeDisplay(); saveProgress();
   document.getElementById('noteBox').value = await loadNote(currentBlock);
-  document.getElementById('transcriptBox').value = await loadTranscript(currentBlock);
 }
 
 function startLoopWatcher(){
@@ -653,36 +632,6 @@ document.querySelectorAll('.speed-btn').forEach(btn => {
 
 const noteBox = document.getElementById('noteBox');
 noteBox.addEventListener('input', () => { if(saveDebounce) clearTimeout(saveDebounce); saveDebounce = setTimeout(() => saveNote(currentBlock, noteBox.value), 700); });
-const transcriptBox = document.getElementById('transcriptBox');
-transcriptBox.addEventListener('input', () => { if(transcriptDebounce) clearTimeout(transcriptDebounce); transcriptDebounce = setTimeout(() => saveTranscript(currentBlock, transcriptBox.value), 700); });
-
-/* diff word-level (LCS) */
-function diffWords(userText, realText){
-  const norm = w => w.toLowerCase().replace(/[.,!?;:"“”'’()-]/g,'');
-  const a = userText.trim().split(/\s+/).filter(Boolean);
-  const b = realText.trim().split(/\s+/).filter(Boolean);
-  const m = a.length, n = b.length;
-  const dp = Array.from({length:m+1}, () => new Array(n+1).fill(0));
-  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) dp[i][j] = norm(a[i-1])===norm(b[j-1]) ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
-  let i=m, j=n; const userOut=[], realOut=[];
-  while(i>0 && j>0){
-    if(norm(a[i-1])===norm(b[j-1])){ userOut.unshift({w:a[i-1],t:'match'}); realOut.unshift({w:b[j-1],t:'match'}); i--; j--; }
-    else if(dp[i-1][j] >= dp[i][j-1]){ userOut.unshift({w:a[i-1],t:'extra'}); i--; }
-    else{ realOut.unshift({w:b[j-1],t:'missing'}); j--; }
-  }
-  while(i>0){ userOut.unshift({w:a[i-1],t:'extra'}); i--; }
-  while(j>0){ realOut.unshift({w:b[j-1],t:'missing'}); j--; }
-  return { userOut, realOut };
-}
-function renderDiff(arr){ return arr.map(item => `<span class="${item.t==='match'?'w-match':item.t==='extra'?'w-extra':'w-missing'}">${item.w}</span>`).join(' '); }
-document.getElementById('revealBtn').addEventListener('click', () => {
-  const realText = transcriptBox.value;
-  if(!realText.trim()){ alert('Cole a transcrição real deste bloco antes de comparar.'); return; }
-  const { userOut, realOut } = diffWords(noteBox.value, realText);
-  document.getElementById('diffUser').innerHTML = renderDiff(userOut) || '<span class="w-match">(vazio)</span>';
-  document.getElementById('diffReal').innerHTML = renderDiff(realOut);
-  document.getElementById('diffOutput').classList.add('show');
-});
 
 document.getElementById('globalTotalBtn').addEventListener('click', async () => {
   const btn = document.getElementById('globalTotalBtn'); const out = document.getElementById('statGlobal');
@@ -829,7 +778,7 @@ document.addEventListener('keydown', (e) => {
   if(e.key.toLowerCase() === 'a' && !document.getElementById('audioModeBtn').hasAttribute('hidden')) document.getElementById('audioModeBtn').click();
 });
 
-window.addEventListener('beforeunload', () => { flushCurrentNote(); flushCurrentTranscript(); flushStudyTime(); });
+window.addEventListener('beforeunload', () => { flushCurrentNote(); flushStudyTime(); });
 
 /* ---------- PWA: registro do service worker ---------- */
 if('serviceWorker' in navigator){
