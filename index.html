@@ -233,6 +233,14 @@
       <button class="btn-primary" id="nextBtn">Próximo bloco ▶</button>
     </div>
 
+    <div class="speed-row" id="modeRow">
+      <span class="field-label">Modo</span>
+      <button class="speed-btn mode-btn active" data-mode="loop">01 · Loop no bloco</button>
+      <button class="speed-btn mode-btn" data-mode="repeatN">02 · Repetir N vezes</button>
+      <button class="speed-btn mode-btn" data-mode="continuous">03 · Tocar direto</button>
+      <input type="number" id="repeatCountInput" value="3" min="1" max="20" style="display:none; width:64px;" />
+    </div>
+
     <div class="speed-row">
       <span class="field-label">Velocidade</span>
       <button class="speed-btn" data-rate="0.25">0.25x</button>
@@ -327,6 +335,8 @@ let visited = new Set(), notesWithContent = new Set();
 let currentKey = null, currentRate = 1;
 let saveDebounce = null, enDebounce = null, ptDebounce = null;
 let savedStudySeconds = 0, sessionSeconds = 0, lastFlush = 0;
+let playbackMode = 'loop'; // 'loop' = Modo 01, 'repeatN' = Modo 02, 'continuous' = Modo 03
+let repeatTarget = 3, blockRepeatCount = 0;
 
 /* ---------- tabs ---------- */
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -583,6 +593,7 @@ async function flushStudyTime(){
 async function seekToBlock(index, play){
   flushCurrentNote(); await flushStudyTime();
   currentBlock = Math.max(0, Math.min(index, totalBlocks - 1));
+  blockRepeatCount = 0;
   visited.add(currentBlock);
   const start = currentBlock * blockSeconds;
   engine.seekTo(start); engine.setRate(currentRate);
@@ -594,13 +605,43 @@ async function seekToBlock(index, play){
   document.getElementById('noteBox').value = await loadNote(currentBlock);
 }
 
+async function advanceBlockDisplay(index){
+  flushCurrentNote();
+  currentBlock = Math.max(0, Math.min(index, totalBlocks - 1));
+  blockRepeatCount = 0;
+  visited.add(currentBlock);
+  const start = currentBlock * blockSeconds;
+  document.getElementById('blockIndex').textContent = currentBlock + 1;
+  document.getElementById('tStart').textContent = fmt(start);
+  document.getElementById('tEnd').textContent = fmt(Math.min(start + blockSeconds, duration));
+  refreshTimelineHighlight(); saveProgress();
+  document.getElementById('noteBox').value = await loadNote(currentBlock);
+}
+
 function startLoopWatcher(){
   if(loopInterval) clearInterval(loopInterval);
   loopInterval = setInterval(() => {
     if(!engine) return;
     const t = engine.getCurrentTime();
     const blockEnd = (currentBlock + 1) * blockSeconds;
-    if(t >= blockEnd - 0.15){ engine.seekTo(currentBlock * blockSeconds); }
+    if(t >= blockEnd - 0.15){
+      if(playbackMode === 'loop'){
+        // Modo 01: repete o mesmo bloco em loop até o usuário avançar manualmente
+        engine.seekTo(currentBlock * blockSeconds);
+      } else if(playbackMode === 'repeatN'){
+        // Modo 02: repete o bloco N vezes, depois avança sozinho
+        blockRepeatCount++;
+        if(blockRepeatCount >= repeatTarget){
+          if(currentBlock < totalBlocks - 1){ seekToBlock(currentBlock + 1, true); }
+          else{ blockRepeatCount = 0; engine.seekTo(currentBlock * blockSeconds); }
+        } else {
+          engine.seekTo(currentBlock * blockSeconds);
+        }
+      } else if(playbackMode === 'continuous'){
+        // Modo 03: toca direto, sem pausas nem loops — só atualiza qual bloco está passando
+        if(currentBlock < totalBlocks - 1){ advanceBlockDisplay(currentBlock + 1); }
+      }
+    }
     if(engine.isPlaying()){
       sessionSeconds += 0.2; refreshTimeDisplay();
       if(sessionSeconds - lastFlush > 5){ lastFlush = sessionSeconds; flushStudyTime(); }
@@ -621,14 +662,46 @@ document.getElementById('audioModeBtn').addEventListener('click', () => {
 document.getElementById('audioOverlayYt').addEventListener('click', () => document.getElementById('audioModeBtn').click());
 document.getElementById('audioOverlayVideo').addEventListener('click', () => document.getElementById('audioModeBtn').click());
 
-document.querySelectorAll('.speed-btn').forEach(btn => {
+document.querySelectorAll('.speed-btn[data-rate]').forEach(btn => {
   btn.addEventListener('click', () => {
     currentRate = parseFloat(btn.dataset.rate);
-    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.speed-btn[data-rate]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     if(engine) engine.setRate(currentRate);
   });
 });
+
+/* ---------- modo de reprodução (01 loop / 02 repetir N / 03 direto) ---------- */
+const repeatCountInput = document.getElementById('repeatCountInput');
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    playbackMode = btn.dataset.mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    repeatCountInput.style.display = playbackMode === 'repeatN' ? 'inline-block' : 'none';
+    blockRepeatCount = 0;
+    localDB.set('playbackMode', playbackMode, false).catch(()=>{});
+  });
+});
+repeatCountInput.addEventListener('change', () => {
+  repeatTarget = Math.max(1, parseInt(repeatCountInput.value, 10) || 3);
+  repeatCountInput.value = repeatTarget;
+  blockRepeatCount = 0;
+  localDB.set('repeatTarget', String(repeatTarget), false).catch(()=>{});
+});
+(async function restorePlaybackModePref(){
+  try{
+    const m = await localDB.get('playbackMode', false);
+    if(m && m.value){
+      playbackMode = m.value;
+      const btn = document.querySelector(`.mode-btn[data-mode="${playbackMode}"]`);
+      if(btn){ document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+      repeatCountInput.style.display = playbackMode === 'repeatN' ? 'inline-block' : 'none';
+    }
+    const r = await localDB.get('repeatTarget', false);
+    if(r && r.value){ repeatTarget = parseInt(r.value, 10) || 3; repeatCountInput.value = repeatTarget; }
+  }catch(e){}
+})();
 
 const noteBox = document.getElementById('noteBox');
 noteBox.addEventListener('input', () => { if(saveDebounce) clearTimeout(saveDebounce); saveDebounce = setTimeout(() => saveNote(currentBlock, noteBox.value), 700); });
