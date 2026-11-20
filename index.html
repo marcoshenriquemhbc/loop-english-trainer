@@ -105,6 +105,7 @@
   .sentence-card.on{ display:block; }
   .sent-label{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:8px; }
   .sent-cur{ font-size:18px; line-height:1.5; color:var(--text); font-weight:500; min-height:54px; }
+  .sent-pt{ font-size:15px; line-height:1.5; color:var(--amber); margin-top:8px; font-style:italic; min-height:20px; }
   .sent-next{ font-size:13px; line-height:1.4; color:var(--muted); margin-top:10px; }
   .sent-next .sn-tag{ font-family:'JetBrains Mono', monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; margin-right:6px; }
 
@@ -268,6 +269,7 @@
     <div class="sentence-card" id="sentenceCard">
       <div class="sent-label" id="sentLabel"></div>
       <div class="sent-cur" id="sentCur"></div>
+      <div class="sent-pt" id="sentPt"></div>
       <div class="sent-next"><span class="sn-tag">próxima</span><span id="sentNext"></span></div>
     </div>
 
@@ -325,6 +327,13 @@
         <button class="mini-upload" id="applyTranscriptBtn">montar frases</button>
         <button class="mini-upload" id="clearTranscriptBtn">voltar aos blocos de tempo</button>
         <span class="transcript-mode" id="transcriptMode"></span>
+      </div>
+
+      <span class="field-label" style="margin-top:14px;">Tradução em português — uma linha por frase, na mesma ordem</span>
+      <textarea id="transcriptPtInput" placeholder="Cole aqui a tradução, uma linha para cada frase..." style="min-height:90px;"></textarea>
+      <div class="transcript-actions">
+        <button class="mini-upload" id="savePtBtn">salvar tradução</button>
+        <span class="transcript-mode" id="ptStatus"></span>
       </div>
     </div>
 
@@ -408,6 +417,7 @@ let engine = null;
 
 let blockSeconds = 10, currentBlock = 0, totalBlocks = 0, duration = 0;
 let segments = null;      // frases da transcrição: [{start, end, text}]
+let ptLines = [];         // tradução em português, uma linha por frase
 let transcriptRaw = '';
 let loopInterval = null;
 let visited = new Set(), notesWithContent = new Set();
@@ -456,7 +466,6 @@ function extractVideoId(input){
   return null;
 }
 
-/* chamada pelo script da API do YouTube quando ela termina de carregar */
 function onYouTubeIframeAPIReady(){
   ytApiReady = true;
   if(pendingVideoId){ const id = pendingVideoId; pendingVideoId = null; startYtPlayer(id); }
@@ -599,7 +608,6 @@ function renderLibrary(){
   });
 }
 
-/* um único ouvinte para toda a lista (evita botões sem ligação) */
 document.getElementById('libList').addEventListener('click', (e) => {
   const actBtn = e.target.closest('[data-act]');
   const row = e.target.closest('.lib-item');
@@ -800,7 +808,7 @@ async function applyTranscript(raw){
   localDB.set('transcript:' + currentKey, raw);
   segments = sentences;
   visited.clear();
-  await preloadNoteFlags();
+  preloadNoteFlags();
   currentBlock = 0;
   totalBlocks = segments.length;
   buildTimeline();
@@ -808,12 +816,12 @@ async function applyTranscript(raw){
   updateTranscriptMode();
 }
 
-async function removeTranscript(){
+function removeTranscript(){
   localDB.del('transcript:' + currentKey);
   segments = null; transcriptRaw = '';
   document.getElementById('transcriptInput').value = '';
   visited.clear();
-  await preloadNoteFlags();
+  preloadNoteFlags();
   currentBlock = 0;
   totalBlocks = totalUnits();
   buildTimeline();
@@ -844,6 +852,7 @@ function updateTranscriptMode(){
     noteLabel.textContent = 'O que você entendeu neste bloco';
   }
   document.getElementById('sentenceCard').classList.toggle('on', !!segments);
+  updatePtStatus();
   updateSentenceCard();
 }
 
@@ -851,8 +860,34 @@ function updateSentenceCard(){
   if(!segments) return;
   document.getElementById('sentLabel').textContent = `Frase ${currentBlock + 1} de ${segments.length}`;
   document.getElementById('sentCur').textContent = segments[currentBlock] ? segments[currentBlock].text : '';
+  document.getElementById('sentPt').textContent = ptLines[currentBlock] || '';
   document.getElementById('sentNext').textContent = segments[currentBlock + 1] ? segments[currentBlock + 1].text : '— fim —';
 }
+
+/* ----- tradução em português, alinhada por linha ----- */
+function loadPtForSource(){
+  const raw = localDB.get('transcriptPt:' + currentKey) || '';
+  document.getElementById('transcriptPtInput').value = raw;
+  ptLines = raw ? raw.split('\n').map(l => l.trim()) : [];
+  updatePtStatus();
+}
+function savePtTranslation(){
+  const raw = document.getElementById('transcriptPtInput').value.replace(/\r/g, '');
+  if(raw.trim()) localDB.set('transcriptPt:' + currentKey, raw.trim());
+  else localDB.del('transcriptPt:' + currentKey);
+  ptLines = raw.split('\n').map(l => l.trim());
+  updatePtStatus();
+  updateSentenceCard();
+}
+function updatePtStatus(){
+  const el = document.getElementById('ptStatus');
+  const filled = ptLines.filter(Boolean).length;
+  if(!segments || !filled){ el.textContent = ''; return; }
+  el.textContent = filled === segments.length
+    ? `✓ ${filled} linhas alinhadas`
+    : `⚠ ${filled} linhas para ${segments.length} frases`;
+}
+document.getElementById('savePtBtn').addEventListener('click', savePtTranslation);
 
 document.getElementById('applyTranscriptBtn').addEventListener('click', () => {
   const raw = document.getElementById('transcriptInput').value;
@@ -875,17 +910,18 @@ document.getElementById('fileTranscript').addEventListener('change', (e) => {
 function resetForNewSource(key){
   currentBlock = 0; visited.clear(); notesWithContent.clear();
   currentKey = key; savedStudySeconds = 0; sessionSeconds = 0; duration = 0;
-  segments = null; transcriptRaw = '';
+  segments = null; transcriptRaw = ''; ptLines = [];
   document.getElementById('statGlobal').style.display = 'none';
   document.getElementById('globalTotalBtn').style.display = 'inline';
   document.getElementById('globalTotalBtn').textContent = 'ver tempo total estudado';
 }
 
-async function initAfterEngineReady(){
+function initAfterEngineReady(){
   duration = engine.getDuration() || 0;
   loadTranscriptForSource();
+  loadPtForSource();
   totalBlocks = totalUnits();
-  await preloadNoteFlags();
+  preloadNoteFlags();
   loadStudyTime();
   loadBilingualTexts();
   buildTimeline();
@@ -1066,7 +1102,6 @@ repeatCountInput.addEventListener('change', () => {
   localDB.set('repeatTarget', String(repeatTarget));
 });
 
-/* restaura preferências salvas */
 (function restorePrefs(){
   const m = localDB.get('playbackMode');
   if(m){
