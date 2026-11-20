@@ -146,6 +146,8 @@
   .transcript-section textarea{ min-height:110px; }
   .transcript-actions{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:10px; }
   .transcript-mode{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--amber); text-transform:uppercase; letter-spacing:.08em; margin-left:auto; }
+  .mail-input{ width:100%; margin-top:8px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); padding: 10px 12px; border-radius: 4px; font-family:'Inter',sans-serif; font-size: 13px; outline:none; }
+  .mail-input:focus{ border-color: var(--crimson); }
 
   .bilingual-section{ border-top: 1px solid var(--line); padding: 16px; }
   .bilingual-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; }
@@ -319,22 +321,25 @@
     </div>
 
     <div class="transcript-section">
-      <span class="field-label">Transcrição para shadowing — frase a frase (SRT, VTT ou texto copiado do YouTube)</span>
+      <span class="field-label">Transcrição em inglês — frase a frase (SRT, VTT ou texto copiado do YouTube)</span>
       <textarea id="transcriptInput" placeholder="Cole a legenda aqui (SRT, VTT ou o texto copiado do painel de transcrição do YouTube)..."></textarea>
       <div class="transcript-actions">
         <button class="mini-upload" id="uploadTranscriptBtn">carregar arquivo</button>
         <input type="file" id="fileTranscript" class="hidden-input" accept=".srt,.vtt,.txt">
-        <button class="mini-upload" id="applyTranscriptBtn">montar frases</button>
+        <button class="mini-upload" id="applyTranscriptBtn">montar frases + traduzir</button>
         <button class="mini-upload" id="clearTranscriptBtn">voltar aos blocos de tempo</button>
         <span class="transcript-mode" id="transcriptMode"></span>
       </div>
 
-      <span class="field-label" style="margin-top:14px;">Tradução em português — uma linha por frase, na mesma ordem</span>
-      <textarea id="transcriptPtInput" placeholder="Cole aqui a tradução, uma linha para cada frase..." style="min-height:90px;"></textarea>
+      <span class="field-label" style="margin-top:14px;">Tradução em português — gerada automaticamente, uma linha por frase</span>
+      <textarea id="transcriptPtInput" placeholder="A tradução aparece aqui automaticamente. Você também pode colar a sua." style="min-height:90px;"></textarea>
       <div class="transcript-actions">
+        <button class="mini-upload" id="autoTranslateBtn">traduzir automaticamente</button>
         <button class="mini-upload" id="savePtBtn">salvar tradução</button>
         <span class="transcript-mode" id="ptStatus"></span>
       </div>
+      <div class="transcript-actions" id="autoStatus" style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted);"></div>
+      <input type="text" class="mail-input" id="mmEmail" placeholder="seu e-mail (opcional — aumenta o limite gratuito de tradução)">
     </div>
 
     <div class="bilingual-section">
@@ -406,6 +411,7 @@ function showMsg(id, text){
   el.classList.add('show');
 }
 function hideMsg(id){ document.getElementById(id).classList.remove('show'); }
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 /* =====================================================================
    ESTADO
@@ -416,8 +422,8 @@ let audioEl = null, videoEl = null;
 let engine = null;
 
 let blockSeconds = 10, currentBlock = 0, totalBlocks = 0, duration = 0;
-let segments = null;      // frases da transcrição: [{start, end, text}]
-let ptLines = [];         // tradução em português, uma linha por frase
+let segments = null;      // frases em inglês: [{start, end, text}]
+let ptLines = [];         // tradução em português, uma linha por frase (mesmo índice)
 let transcriptRaw = '';
 let loopInterval = null;
 let visited = new Set(), notesWithContent = new Set();
@@ -427,6 +433,7 @@ let savedStudySeconds = 0, sessionSeconds = 0, lastFlush = 0;
 let playbackMode = 'loop';
 let repeatTarget = 3, blockRepeatCount = 0;
 let lib = [];
+let autoRunning = false;
 
 /* unidade de navegação: frase (se há transcrição) ou bloco de tempo */
 function totalUnits(){ return segments ? segments.length : Math.max(1, Math.ceil(duration / blockSeconds)); }
@@ -720,7 +727,7 @@ function showFrame(which){
 }
 
 /* =====================================================================
-   TRANSCRIÇÃO: SRT, VTT ou texto copiado do YouTube
+   TRANSCRIÇÃO EM INGLÊS: SRT, VTT ou texto copiado do YouTube
    ===================================================================== */
 function toSec(h, m, s, f){
   const hours = h ? parseInt(h, 10) : 0;
@@ -797,7 +804,95 @@ function groupSentences(cues){
   return out;
 }
 
-async function applyTranscript(raw){
+/* =====================================================================
+   TRADUÇÃO AUTOMÁTICA (MyMemory: gratuito, sem chave, feito no navegador)
+   ===================================================================== */
+const MM_ENDPOINT = 'https://api.mymemory.translated.net/get';
+
+function chunkText(text, max){
+  max = max || 400;
+  const words = text.split(' ');
+  const chunks = [];
+  let cur = '';
+  for(const w of words){
+    if((cur + ' ' + w).trim().length > max){ if(cur.trim()) chunks.push(cur.trim()); cur = w; }
+    else cur += ' ' + w;
+  }
+  if(cur.trim()) chunks.push(cur.trim());
+  return chunks;
+}
+
+async function translateChunk(text){
+  const params = new URLSearchParams({ q: text, langpair: 'en|pt-BR' });
+  const email = (localDB.get('mmEmail') || '').trim();
+  if(email) params.set('de', email);
+  const res = await fetch(MM_ENDPOINT + '?' + params.toString());
+  if(!res.ok) throw new Error('http ' + res.status);
+  const data = await res.json();
+  const status = String(data.responseStatus);
+  if(status !== '200'){
+    throw new Error(data.responseDetails || ('status ' + status));
+  }
+  return (data.responseData && data.responseData.translatedText) || '';
+}
+
+function setAutoStatus(msg){ document.getElementById('autoStatus').textContent = msg; }
+
+async function autoTranslate(){
+  if(!segments || autoRunning || !currentKey) return;
+  autoRunning = true;
+  const key = currentKey;
+  const segs = segments;
+  const lines = segs.map((_, i) => (ptLines[i] || ''));
+  let failedReason = '';
+  let translatedNow = 0;
+
+  for(let i = 0; i < segs.length; i++){
+    if(key !== currentKey) break;          // trocou de vídeo no meio: para
+    if(lines[i]) continue;                 // já traduzida (cache)
+    if(key === currentKey) setAutoStatus(`traduzindo ${i + 1} de ${segs.length}...`);
+    try{
+      const parts = chunkText(segs[i].text, 400);
+      const out = [];
+      for(const p of parts){ out.push(await translateChunk(p)); await sleep(200); }
+      lines[i] = out.join(' ').trim();
+      translatedNow++;
+    }catch(e){
+      failedReason = String(e.message || e);
+      break;
+    }
+    /* salva a cada frase: se algo falhar, nada do que já foi feito se perde */
+    localDB.set('transcriptPt:' + key, lines.join('\n'));
+    if(key === currentKey){
+      ptLines = lines.slice();
+      document.getElementById('transcriptPtInput').value = lines.join('\n');
+      updatePtStatus();
+      updateSentenceCard();
+    }
+  }
+
+  autoRunning = false;
+  if(key !== currentKey) return;
+  const missing = lines.filter(l => !l).length;
+  if(missing === 0){
+    setAutoStatus(`✓ tradução concluída (${segs.length} frases)`);
+  } else if(failedReason){
+    const quota = /limit|quota|exceed|warning/i.test(failedReason);
+    setAutoStatus(quota
+      ? `⚠ limite diário do tradutor atingido. ${missing} frases faltam — cole um e-mail acima e toque em "traduzir automaticamente" de novo, ou volte amanhã.`
+      : `⚠ falha na tradução (${failedReason}). ${missing} frases faltam — tente de novo em instantes.`);
+  } else {
+    setAutoStatus(`⚠ ${missing} frases ficaram sem tradução.`);
+  }
+}
+
+document.getElementById('autoTranslateBtn').addEventListener('click', () => {
+  if(!segments){ alert('Monte as frases primeiro (botão "montar frases + traduzir").'); return; }
+  autoTranslate();
+});
+
+/* ----- aplicar transcrição: monta frases e traduz automaticamente ----- */
+function applyTranscript(raw){
   const sentences = groupSentences(parseTranscript(raw));
   if(!sentences.length){
     alert('Não consegui ler frases nesse texto. Confira se é SRT, VTT ou o texto copiado do YouTube.');
@@ -806,6 +901,10 @@ async function applyTranscript(raw){
   if(!engine){ alert('Abra primeiro um vídeo ou áudio para usar a transcrição.'); return; }
   transcriptRaw = raw;
   localDB.set('transcript:' + currentKey, raw);
+  /* a tradução antiga pode não bater com as novas frases: zera */
+  localDB.del('transcriptPt:' + currentKey);
+  ptLines = [];
+  document.getElementById('transcriptPtInput').value = '';
   segments = sentences;
   visited.clear();
   preloadNoteFlags();
@@ -814,12 +913,15 @@ async function applyTranscript(raw){
   buildTimeline();
   seekToBlock(0, true);
   updateTranscriptMode();
+  autoTranslate();
 }
 
 function removeTranscript(){
   localDB.del('transcript:' + currentKey);
-  segments = null; transcriptRaw = '';
+  localDB.del('transcriptPt:' + currentKey);
+  segments = null; transcriptRaw = ''; ptLines = [];
   document.getElementById('transcriptInput').value = '';
+  document.getElementById('transcriptPtInput').value = '';
   visited.clear();
   preloadNoteFlags();
   currentBlock = 0;
@@ -827,10 +929,11 @@ function removeTranscript(){
   buildTimeline();
   seekToBlock(0, true);
   updateTranscriptMode();
+  setAutoStatus('');
 }
 
 function loadTranscriptForSource(){
-  segments = null; transcriptRaw = '';
+  segments = null; transcriptRaw = ''; ptLines = [];
   const raw = localDB.get('transcript:' + currentKey);
   if(raw){
     transcriptRaw = raw;
@@ -864,7 +967,7 @@ function updateSentenceCard(){
   document.getElementById('sentNext').textContent = segments[currentBlock + 1] ? segments[currentBlock + 1].text : '— fim —';
 }
 
-/* ----- tradução em português, alinhada por linha ----- */
+/* ----- tradução: carregar, salvar manualmente, status ----- */
 function loadPtForSource(){
   const raw = localDB.get('transcriptPt:' + currentKey) || '';
   document.getElementById('transcriptPtInput').value = raw;
@@ -872,8 +975,9 @@ function loadPtForSource(){
   updatePtStatus();
 }
 function savePtTranslation(){
+  /* não usar trim() no texto inteiro: linhas vazias no começo mudariam o alinhamento */
   const raw = document.getElementById('transcriptPtInput').value.replace(/\r/g, '');
-  if(raw.trim()) localDB.set('transcriptPt:' + currentKey, raw.trim());
+  if(raw.replace(/\s/g, '')) localDB.set('transcriptPt:' + currentKey, raw);
   else localDB.del('transcriptPt:' + currentKey);
   ptLines = raw.split('\n').map(l => l.trim());
   updatePtStatus();
@@ -885,9 +989,14 @@ function updatePtStatus(){
   if(!segments || !filled){ el.textContent = ''; return; }
   el.textContent = filled === segments.length
     ? `✓ ${filled} linhas alinhadas`
-    : `⚠ ${filled} linhas para ${segments.length} frases`;
+    : `⚠ ${filled} de ${segments.length} frases`;
 }
 document.getElementById('savePtBtn').addEventListener('click', savePtTranslation);
+
+document.getElementById('mmEmail').value = localDB.get('mmEmail') || '';
+document.getElementById('mmEmail').addEventListener('change', (e) => {
+  localDB.set('mmEmail', e.target.value.trim());
+});
 
 document.getElementById('applyTranscriptBtn').addEventListener('click', () => {
   const raw = document.getElementById('transcriptInput').value;
@@ -911,6 +1020,7 @@ function resetForNewSource(key){
   currentBlock = 0; visited.clear(); notesWithContent.clear();
   currentKey = key; savedStudySeconds = 0; sessionSeconds = 0; duration = 0;
   segments = null; transcriptRaw = ''; ptLines = [];
+  setAutoStatus('');
   document.getElementById('statGlobal').style.display = 'none';
   document.getElementById('globalTotalBtn').style.display = 'inline';
   document.getElementById('globalTotalBtn').textContent = 'ver tempo total estudado';
