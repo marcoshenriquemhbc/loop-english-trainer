@@ -52,14 +52,37 @@
   button:active{ transform: scale(0.97); }
   .load-btn{ background: var(--crimson); color: #fff; padding: 0 22px; height:44px; font-size: 14px; }
   .load-btn:hover{ filter: brightness(1.12); }
+  .row-btns{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 
   .file-drop{ border: 1px dashed var(--line); border-radius: 4px; padding: 22px 16px; text-align:center; color: var(--muted); font-size:13px; margin-bottom:12px; cursor:pointer; background: var(--surface); }
   .file-drop:hover{ border-color: var(--crimson); }
   .file-drop.has-file{ border-style:solid; border-color: var(--crimson-dim); color: var(--text); }
   .hidden-input{ display:none; }
 
-  .error-msg{ display:none; background: rgba(220,47,79,0.1); border:1px solid var(--crimson-dim); color: var(--text); font-size:13px; padding: 12px 14px; border-radius:4px; margin-top:12px; line-height:1.5; }
-  .error-msg.show{ display:block; }
+  .msg{ display:none; background: rgba(220,47,79,0.1); border:1px solid var(--crimson-dim); color: var(--text); font-size:13px; padding: 12px 14px; border-radius:4px; margin-top:12px; line-height:1.5; }
+  .msg.show{ display:block; }
+
+  .lib-box{ margin-top:22px; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:14px; }
+  .lib-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .lib-head .field-label{ margin:0; }
+  .lib-count{ font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); }
+  .lib-empty{ color:var(--muted); font-size:13px; line-height:1.5; padding:6px 0 4px; }
+  .lib-list{ max-height: 420px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .lib-item{ display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .lib-item.active .lib-title{ color:var(--crimson); }
+  .lib-thumb{ width:96px; aspect-ratio:16/9; object-fit:cover; border-radius:3px; background:#000; flex:none; }
+  .lib-info{ flex:1 1 auto; min-width:0; }
+  .lib-title{ font-size:14px; font-weight:500; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .lib-meta{ font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-top:4px; }
+  .lib-actions{ display:flex; gap:6px; flex:none; }
+  .lib-actions button{ padding:8px 10px; font-size:12px; background:var(--surface-2); color:var(--text); border:1px solid var(--line); }
+  .lib-actions button:hover{ border-color:var(--crimson); }
+  .lib-actions .lib-open{ background:var(--crimson); border-color:var(--crimson); }
+  @media (max-width:520px){
+    .lib-item{ flex-wrap:wrap; }
+    .lib-thumb{ width:84px; }
+    .lib-actions{ width:100%; justify-content:flex-end; }
+  }
 
   .player-shell{ background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-top: 22px; display: none; }
   .player-shell.active{ display:block; }
@@ -78,7 +101,6 @@
   .status-bar .block-time{ font-size: 20px; color: var(--text); font-weight: 700; }
   .status-bar .block-time em{ color: var(--crimson); font-style: normal; }
 
-  /* cartão da frase (modo transcrição) */
   .sentence-card{ display:none; margin: 14px 16px 0; padding:16px; background:var(--surface-2); border:1px solid var(--line); border-left:3px solid var(--crimson); border-radius:4px; }
   .sentence-card.on{ display:block; }
   .sent-label{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:8px; }
@@ -119,13 +141,11 @@
   textarea{ width:100%; min-height: 80px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); border-radius:4px; padding:12px; font-family:'Inter',sans-serif; font-size:14px; line-height:1.5; resize: vertical; outline:none; }
   textarea:focus{ border-color: var(--crimson); }
 
-  /* ---- transcrição ---- */
   .transcript-section{ border-top: 1px solid var(--line); padding: 16px; }
   .transcript-section textarea{ min-height:110px; }
   .transcript-actions{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:10px; }
   .transcript-mode{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--amber); text-transform:uppercase; letter-spacing:.08em; margin-left:auto; }
 
-  /* ---- leitura bilíngue ---- */
   .bilingual-section{ border-top: 1px solid var(--line); padding: 16px; }
   .bilingual-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; }
   @media (max-width: 520px){ .bilingual-grid{ grid-template-columns: 1fr; } }
@@ -169,29 +189,6 @@
 
   .hint{ font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); padding: 12px 16px 18px; letter-spacing: 0.02em; border-top: 1px solid var(--line); }
   .hint kbd{ background: var(--surface-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--text); }
-
-  /* ---- biblioteca de vídeos ---- */
-  .lib-save-btn{ height:44px; padding:0 18px; font-size:14px; margin-left:8px; }
-  .lib-box{ margin-top:22px; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:14px 14px 6px; }
-  .lib-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-  .lib-head .field-label{ margin:0; }
-  .lib-count{ font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); }
-  .lib-empty{ color:var(--muted); font-size:13px; line-height:1.5; padding:6px 0 14px; }
-  .lib-item{ display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
-  .lib-item.active .lib-title{ color:var(--crimson); }
-  .lib-thumb{ width:96px; aspect-ratio:16/9; object-fit:cover; border-radius:3px; background:#000; flex:none; cursor:pointer; }
-  .lib-info{ flex:1 1 auto; min-width:0; }
-  .lib-title{ font-size:14px; font-weight:500; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer; }
-  .lib-meta{ font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-top:4px; }
-  .lib-actions{ display:flex; gap:6px; flex:none; }
-  .lib-actions button{ padding:8px 10px; font-size:12px; background:var(--surface-2); color:var(--text); border:1px solid var(--line); }
-  .lib-actions button:hover{ border-color:var(--crimson); }
-  .lib-actions .lib-open{ background:var(--crimson); border-color:var(--crimson); }
-  @media (max-width:520px){
-    .lib-item{ flex-wrap:wrap; }
-    .lib-thumb{ width:84px; }
-    .lib-actions{ width:100%; justify-content:flex-end; }
-  }
 </style>
 </head>
 <body>
@@ -207,6 +204,7 @@
     <button class="tab-btn" data-tab="video">Vídeo local</button>
   </div>
 
+  <!-- ===== YOUTUBE ===== -->
   <div class="tab-panel active" id="tabYoutube">
     <div class="input-row">
       <div style="flex:1 1 280px;">
@@ -215,10 +213,19 @@
       </div>
       <div><span class="field-label">Bloco (seg)</span><input type="number" id="blockSizeYt" value="10" min="2" max="120" /></div>
     </div>
-    <button class="load-btn" id="loadYtBtn">Carregar vídeo</button>
-    <div class="error-msg" id="ytError">Este vídeo não carregou — pode ser incorporação desativada pelo dono, ou o navegador bloqueando o player. Uma vez instalado como app (fora do navegador embutido), costuma funcionar melhor. Tente outro link, ou use as abas de upload local.</div>
+    <div class="row-btns">
+      <button class="load-btn" id="loadYtBtn">Carregar vídeo</button>
+      <button class="load-btn" id="saveLibBtn" style="background:var(--surface-2); border:1px solid var(--line);">☆ Salvar na biblioteca</button>
+    </div>
+    <div class="msg" id="ytMsg">Este vídeo não carregou — pode ser incorporação desativada pelo dono, ou o navegador bloqueando o player. Tente outro link, ou use as abas de upload local.</div>
+
+    <div class="lib-box">
+      <div class="lib-head"><span class="field-label">Meus vídeos em estudo</span><span class="lib-count" id="libCount"></span></div>
+      <div class="lib-list" id="libList"></div>
+    </div>
   </div>
 
+  <!-- ===== ÁUDIO LOCAL ===== -->
   <div class="tab-panel" id="tabAudio">
     <div class="file-drop" id="audioDropZone">
       <span id="audioDropLabel">Toque para escolher um arquivo de áudio (mp3, m4a, wav...)</span>
@@ -228,6 +235,7 @@
     <button class="load-btn" id="loadAudioBtn">Carregar áudio</button>
   </div>
 
+  <!-- ===== VÍDEO LOCAL ===== -->
   <div class="tab-panel" id="tabVideo">
     <div class="file-drop" id="videoDropZone">
       <span id="videoDropLabel">Toque para escolher um arquivo de vídeo (mp4, mov...)</span>
@@ -237,6 +245,7 @@
     <button class="load-btn" id="loadVideoBtn">Carregar vídeo</button>
   </div>
 
+  <!-- ===== PLAYER ===== -->
   <div class="player-shell" id="playerShell">
     <div class="video-frame" id="ytFrame">
       <div id="player-mount"></div>
@@ -247,7 +256,7 @@
       <div class="audio-overlay" id="audioOverlayVideo"><div class="pulse"></div><span>Modo áudio — só ouça</span></div>
     </div>
     <div class="audio-only-visual" id="audioOnlyFrame" style="display:none;">
-      <div class="pulse" id="audioPulse"></div>
+      <div class="pulse"></div>
       <span class="filename" id="audioFileName"></span>
     </div>
 
@@ -279,7 +288,7 @@
       <button class="btn-primary" id="nextBtn">Próximo bloco ▶</button>
     </div>
 
-    <div class="speed-row" id="modeRow">
+    <div class="speed-row">
       <span class="field-label">Modo</span>
       <button class="speed-btn mode-btn active" data-mode="loop">01 · Loop no bloco</button>
       <button class="speed-btn mode-btn" data-mode="repeatN">02 · Repetir N vezes</button>
@@ -340,6 +349,7 @@
   </div>
 </div>
 
+<!-- ===== MODO LEITURA ===== -->
 <div class="reading-overlay" id="readingOverlay">
   <div class="reading-topbar">
     <button class="close-btn" id="closeReadingBtn">✕</button>
@@ -367,27 +377,38 @@
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-/* ---------- armazenamento local (localStorage) ---------- */
+/* =====================================================================
+   ARMAZENAMENTO
+   ===================================================================== */
 const localDB = {
-  async get(key){ const v = localStorage.getItem(key); return v !== null ? { key, value: v } : null; },
-  async set(key, value){ try{ localStorage.setItem(key, value); }catch(e){} return { key, value }; },
-  async delete(key){ localStorage.removeItem(key); return { key, deleted: true }; },
-  async list(prefix){
-    const keys = [];
-    for(let i=0; i<localStorage.length; i++){ const k = localStorage.key(i); if(k && k.startsWith(prefix)) keys.push(k); }
-    return { keys };
+  get(key){ try{ const v = localStorage.getItem(key); return v !== null ? v : null; }catch(e){ return null; } },
+  set(key, value){ try{ localStorage.setItem(key, value); return true; }catch(e){ return false; } },
+  del(key){ try{ localStorage.removeItem(key); }catch(e){} },
+  keys(prefix){
+    const out = [];
+    try{ for(let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if(k && k.startsWith(prefix)) out.push(k); } }catch(e){}
+    return out;
   }
 };
 
-/* ---------- estado geral ---------- */
+function showMsg(id, text){
+  const el = document.getElementById(id);
+  if(text) el.textContent = text;
+  el.classList.add('show');
+}
+function hideMsg(id){ document.getElementById(id).classList.remove('show'); }
+
+/* =====================================================================
+   ESTADO
+   ===================================================================== */
 let mode = 'youtube';
-let ytPlayer = null, apiReady = false, pendingVideoId = null;
+let ytPlayer = null, ytApiReady = false, pendingVideoId = null;
 let audioEl = null, videoEl = null;
 let engine = null;
 
 let blockSeconds = 10, currentBlock = 0, totalBlocks = 0, duration = 0;
-let segments = null;          // frases vindas da transcrição: [{start, end, text}]
-let transcriptRaw = '';       // texto bruto da transcrição guardado
+let segments = null;      // frases da transcrição: [{start, end, text}]
+let transcriptRaw = '';
 let loopInterval = null;
 let visited = new Set(), notesWithContent = new Set();
 let currentKey = null, currentRate = 1;
@@ -395,8 +416,9 @@ let saveDebounce = null, enDebounce = null, ptDebounce = null;
 let savedStudySeconds = 0, sessionSeconds = 0, lastFlush = 0;
 let playbackMode = 'loop';
 let repeatTarget = 3, blockRepeatCount = 0;
+let lib = [];
 
-/* ---------- unidade de navegação: frase (se houver transcrição) ou bloco de tempo ---------- */
+/* unidade de navegação: frase (se há transcrição) ou bloco de tempo */
 function totalUnits(){ return segments ? segments.length : Math.max(1, Math.ceil(duration / blockSeconds)); }
 function unitStart(i){ return segments ? segments[i].start : i * blockSeconds; }
 function unitEnd(i){
@@ -405,75 +427,82 @@ function unitEnd(i){
   return duration ? Math.min(e, duration) : e;
 }
 
-/* ---------- tabs ---------- */
+function fmt(sec){ sec = Math.max(0, Math.round(sec)); const m = Math.floor(sec/60); const s = sec%60; return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0'); }
+function escapeHtml(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function safeName(file){ return file.name.replace(/[^a-zA-Z0-9_.-]/g,'_') + '_' + file.size; }
+
+/* =====================================================================
+   ABAS
+   ===================================================================== */
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const t = btn.dataset.tab;
     mode = t;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b===btn));
-    document.getElementById('tabYoutube').classList.toggle('active', t==='youtube');
-    document.getElementById('tabAudio').classList.toggle('active', t==='audio');
-    document.getElementById('tabVideo').classList.toggle('active', t==='video');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('tabYoutube').classList.toggle('active', t === 'youtube');
+    document.getElementById('tabAudio').classList.toggle('active', t === 'audio');
+    document.getElementById('tabVideo').classList.toggle('active', t === 'video');
   });
 });
 
-/* ---------- YouTube ---------- */
+/* =====================================================================
+   YOUTUBE
+   ===================================================================== */
 function extractVideoId(input){
-  input = input.trim();
+  input = (input || '').trim();
   const m = input.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
   if(m) return m[1];
   if(/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
   return null;
 }
-function onYouTubeIframeAPIReady(){ apiReady = true; if(pendingVideoId) startYtPlayer(pendingVideoId); }
+
+/* chamada pelo script da API do YouTube quando ela termina de carregar */
+function onYouTubeIframeAPIReady(){
+  ytApiReady = true;
+  if(pendingVideoId){ const id = pendingVideoId; pendingVideoId = null; startYtPlayer(id); }
+}
 
 function loadYoutubeVideo(raw, blockSecondsInput){
-  document.getElementById('ytError').classList.remove('show');
+  hideMsg('ytMsg');
   const id = extractVideoId(raw);
   blockSeconds = parseInt(blockSecondsInput, 10) || 10;
-  if(!id){ alert('Não consegui identificar o vídeo nesse link.'); return; }
+  if(!id){ showMsg('ytMsg', 'Não consegui identificar o vídeo nesse link. Confira se copiou o endereço completo.'); return; }
   document.getElementById('urlInput').value = raw;
   document.getElementById('blockSizeYt').value = blockSeconds;
   resetForNewSource(id);
   showFrame('yt');
-  localDB.set('lastSource', JSON.stringify({ mode: 'youtube', url: raw, blockSeconds }), false).catch(()=>{});
-  if(!apiReady){ pendingVideoId = id; } else { startYtPlayer(id); }
+  localDB.set('lastSource', JSON.stringify({ mode: 'youtube', url: raw, blockSeconds }));
+  if(typeof YT === 'undefined' || !YT.Player){
+    showMsg('ytMsg', 'O player do YouTube ainda não carregou. Verifique a conexão ou desative bloqueadores de anúncio/rastreamento e tente de novo.');
+    return;
+  }
+  if(!ytApiReady){ pendingVideoId = id; }
+  else { startYtPlayer(id); }
 }
 
 document.getElementById('loadYtBtn').addEventListener('click', () => {
   loadYoutubeVideo(document.getElementById('urlInput').value, document.getElementById('blockSizeYt').value);
 });
 
-/* ---------- retomar última fonte após F5 ---------- */
-(async function restoreLastSource(){
-  try{
-    const res = await localDB.get('lastSource');
-    if(!res || !res.value) return;
-    const saved = JSON.parse(res.value);
-    if(saved.mode === 'youtube' && saved.url){
-      loadYoutubeVideo(saved.url, saved.blockSeconds || 10);
-    } else if(saved.mode === 'local-audio' && saved.name){
-      document.querySelector('.tab-btn[data-tab="audio"]').click();
-      document.getElementById('audioDropLabel').textContent = `Última vez: "${saved.name}" — toque aqui e selecione o mesmo arquivo pra continuar de onde parou`;
-    } else if(saved.mode === 'local-video' && saved.name){
-      document.querySelector('.tab-btn[data-tab="video"]').click();
-      document.getElementById('videoDropLabel').textContent = `Última vez: "${saved.name}" — toque aqui e selecione o mesmo arquivo pra continuar de onde parou`;
-    }
-  }catch(e){}
-})();
-
 function startYtPlayer(videoId){
   document.getElementById('playerShell').classList.add('active');
-  if(ytPlayer){ ytPlayer.loadVideoById(videoId, 0); }
-  else{
-    ytPlayer = new YT.Player('player-mount', {
-      videoId: videoId,
-      playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
-      events: { onReady: onYtReady, onStateChange: onYtStateChange, onError: onYtError }
-    });
+  try{
+    if(ytPlayer && ytPlayer.loadVideoById){ ytPlayer.loadVideoById(videoId, 0); }
+    else{
+      ytPlayer = new YT.Player('player-mount', {
+        videoId: videoId,
+        playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+        events: { onReady: onYtReady, onStateChange: onYtStateChange, onError: onYtError }
+      });
+    }
+  }catch(e){
+    showMsg('ytMsg', 'Não consegui iniciar o player do YouTube neste navegador.');
   }
 }
-function onYtError(){ document.getElementById('ytError').classList.add('show'); document.getElementById('playerShell').classList.remove('active'); }
+function onYtError(){
+  showMsg('ytMsg', 'Este vídeo não carregou — pode ser incorporação desativada pelo dono, ou o navegador bloqueando o player. Tente outro link ou use as abas de upload local.');
+  document.getElementById('playerShell').classList.remove('active');
+}
 function onYtReady(){
   engine = {
     play: () => ytPlayer.playVideo(), pause: () => ytPlayer.pauseVideo(),
@@ -481,7 +510,7 @@ function onYtReady(){
     getDuration: () => ytPlayer.getDuration() || 0, setRate: (r) => ytPlayer.setPlaybackRate(r),
     isPlaying: () => ytPlayer.getPlayerState() === YT.PlayerState.PLAYING
   };
-  setTimeout(() => initAfterEngineReady(), 300);
+  setTimeout(initAfterEngineReady, 300);
 }
 function onYtStateChange(e){
   const btn = document.getElementById('playPauseBtn');
@@ -490,7 +519,121 @@ function onYtStateChange(e){
   if(e.data === YT.PlayerState.CUED && duration === 0) setTimeout(initAfterEngineReady, 300);
 }
 
-/* ---------- Áudio local ---------- */
+/* =====================================================================
+   BIBLIOTECA DE VÍDEOS
+   ===================================================================== */
+function loadLibrary(){
+  try{
+    const raw = localDB.get('videoLibrary');
+    const parsed = raw ? JSON.parse(raw) : [];
+    lib = Array.isArray(parsed) ? parsed : [];
+  }catch(e){ lib = []; }
+  renderLibrary();
+}
+function persistLibrary(){
+  if(!localDB.set('videoLibrary', JSON.stringify(lib))){
+    showMsg('ytMsg', 'Não consegui salvar a biblioteca (armazenamento do navegador cheio ou bloqueado).');
+  }
+}
+
+async function fetchTitle(id){
+  try{
+    const res = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id));
+    if(!res.ok) return '';
+    const data = await res.json();
+    return data.title || '';
+  }catch(e){ return ''; }
+}
+
+async function saveCurrentToLibrary(){
+  const raw = document.getElementById('urlInput').value.trim();
+  const id = extractVideoId(raw);
+  if(!id){ showMsg('ytMsg', 'Cole um link válido do YouTube antes de salvar.'); return; }
+  const bs = parseInt(document.getElementById('blockSizeYt').value, 10) || 10;
+  const btn = document.getElementById('saveLibBtn');
+  const existing = lib.find(v => v.id === id);
+  if(existing){
+    existing.blockSeconds = bs; existing.url = raw;
+    persistLibrary(); renderLibrary();
+    btn.textContent = '✓ Já estava salva';
+  } else {
+    const item = { id, url: raw, title: '', blockSeconds: bs, added: Date.now() };
+    lib.unshift(item);
+    persistLibrary(); renderLibrary();
+    btn.textContent = '✓ Salvo!';
+    const title = await fetchTitle(id);
+    if(title){ item.title = title; persistLibrary(); renderLibrary(); }
+  }
+  setTimeout(() => { btn.textContent = '☆ Salvar na biblioteca'; }, 1600);
+}
+document.getElementById('saveLibBtn').addEventListener('click', saveCurrentToLibrary);
+
+function renderLibrary(){
+  const listEl = document.getElementById('libList');
+  const countEl = document.getElementById('libCount');
+  countEl.textContent = lib.length ? lib.length + (lib.length === 1 ? ' vídeo' : ' vídeos') : '';
+  if(!lib.length){
+    listEl.innerHTML = '<div class="lib-empty">Nenhum vídeo salvo ainda. Cole um link acima e toque em “Salvar na biblioteca”.</div>';
+    return;
+  }
+  listEl.innerHTML = lib.map(item => {
+    const title = item.title || ('Vídeo ' + item.id);
+    const active = currentKey === item.id ? ' active' : '';
+    return `<div class="lib-item${active}" data-id="${escapeHtml(item.id)}">
+      <img class="lib-thumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/${escapeHtml(item.id)}/mqdefault.jpg">
+      <div class="lib-info">
+        <div class="lib-title">${escapeHtml(title)}</div>
+        <div class="lib-meta">bloco ${escapeHtml(item.blockSeconds)}s · <span class="lib-time" data-time-for="${escapeHtml(item.id)}">—</span></div>
+      </div>
+      <div class="lib-actions">
+        <button data-act="open" class="lib-open">Abrir</button>
+        <button data-act="rename" title="Renomear">✎</button>
+        <button data-act="remove" title="Remover">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  lib.forEach(item => {
+    const s = parseFloat(localDB.get('studytime:' + item.id) || '0') || 0;
+    const el = listEl.querySelector(`[data-time-for="${CSS.escape(item.id)}"]`);
+    if(el) el.textContent = s > 0 ? fmt(s) + ' estudados' : 'ainda não estudado';
+  });
+}
+
+/* um único ouvinte para toda a lista (evita botões sem ligação) */
+document.getElementById('libList').addEventListener('click', (e) => {
+  const actBtn = e.target.closest('[data-act]');
+  const row = e.target.closest('.lib-item');
+  if(!row) return;
+  const item = lib.find(v => v.id === row.dataset.id);
+  if(!item) return;
+  const act = actBtn ? actBtn.dataset.act : 'open';
+  if(act === 'open') openFromLibrary(item);
+  else if(act === 'rename') renameInLibrary(item);
+  else if(act === 'remove') removeFromLibrary(item);
+});
+
+function openFromLibrary(item){
+  document.querySelector('.tab-btn[data-tab="youtube"]').click();
+  document.getElementById('urlInput').value = item.url;
+  loadYoutubeVideo(item.url, item.blockSeconds || 10);
+  renderLibrary();
+  setTimeout(() => document.getElementById('playerShell').scrollIntoView({ behavior:'smooth', block:'start' }), 350);
+}
+function renameInLibrary(item){
+  const n = prompt('Nome do vídeo:', item.title || '');
+  if(n === null) return;
+  item.title = n.trim();
+  persistLibrary(); renderLibrary();
+}
+function removeFromLibrary(item){
+  if(!confirm('Tirar "' + (item.title || item.id) + '" da biblioteca?\n(Suas anotações e o tempo estudado continuam guardados.)')) return;
+  lib = lib.filter(v => v.id !== item.id);
+  persistLibrary(); renderLibrary();
+}
+
+/* =====================================================================
+   ÁUDIO E VÍDEO LOCAIS
+   ===================================================================== */
 const audioDropZone = document.getElementById('audioDropZone');
 const audioFileInput = document.getElementById('audioFileInput');
 let selectedAudioFile = null;
@@ -505,13 +648,12 @@ audioFileInput.addEventListener('change', () => {
 document.getElementById('loadAudioBtn').addEventListener('click', () => {
   if(!selectedAudioFile){ alert('Escolha um arquivo de áudio primeiro.'); return; }
   blockSeconds = parseInt(document.getElementById('blockSizeAudio').value, 10) || 10;
-  const key = 'local-audio:' + safeName(selectedAudioFile);
-  resetForNewSource(key);
+  resetForNewSource('local-audio:' + safeName(selectedAudioFile));
   showFrame('audio');
-  localDB.set('lastSource', JSON.stringify({ mode: 'local-audio', name: selectedAudioFile.name, blockSeconds }), false).catch(()=>{});
+  localDB.set('lastSource', JSON.stringify({ mode: 'local-audio', name: selectedAudioFile.name, blockSeconds }));
   document.getElementById('audioFileName').textContent = selectedAudioFile.name;
   document.getElementById('playerShell').classList.add('active');
-  if(audioEl){ audioEl.pause(); audioEl.src=''; }
+  if(audioEl){ audioEl.pause(); audioEl.src = ''; }
   audioEl = new Audio();
   audioEl.src = URL.createObjectURL(selectedAudioFile);
   audioEl.addEventListener('play', () => document.getElementById('playPauseBtn').textContent = 'Pausar');
@@ -528,7 +670,6 @@ document.getElementById('loadAudioBtn').addEventListener('click', () => {
   audioEl.addEventListener('error', () => alert('Não consegui abrir esse arquivo de áudio.'));
 });
 
-/* ---------- Vídeo local ---------- */
 const videoDropZone = document.getElementById('videoDropZone');
 const videoFileInput = document.getElementById('videoFileInput');
 let selectedVideoFile = null;
@@ -543,10 +684,9 @@ videoFileInput.addEventListener('change', () => {
 document.getElementById('loadVideoBtn').addEventListener('click', () => {
   if(!selectedVideoFile){ alert('Escolha um arquivo de vídeo primeiro.'); return; }
   blockSeconds = parseInt(document.getElementById('blockSizeVideo').value, 10) || 10;
-  const key = 'local-video:' + safeName(selectedVideoFile);
-  resetForNewSource(key);
+  resetForNewSource('local-video:' + safeName(selectedVideoFile));
   showFrame('video');
-  localDB.set('lastSource', JSON.stringify({ mode: 'local-video', name: selectedVideoFile.name, blockSeconds }), false).catch(()=>{});
+  localDB.set('lastSource', JSON.stringify({ mode: 'local-video', name: selectedVideoFile.name, blockSeconds }));
   document.getElementById('playerShell').classList.add('active');
   videoEl = document.getElementById('localVideoEl');
   videoEl.pause(); videoEl.src = URL.createObjectURL(selectedVideoFile);
@@ -564,16 +704,16 @@ document.getElementById('loadVideoBtn').addEventListener('click', () => {
   videoEl.onerror = () => alert('Não consegui abrir esse arquivo de vídeo.');
 });
 
-function safeName(file){ return file.name.replace(/[^a-zA-Z0-9_.-]/g,'_') + '_' + file.size; }
-
 function showFrame(which){
-  document.getElementById('ytFrame').style.display = which==='yt' ? 'block' : 'none';
-  document.getElementById('localVideoFrame').style.display = which==='video' ? 'block' : 'none';
-  document.getElementById('audioOnlyFrame').style.display = which==='audio' ? 'flex' : 'none';
-  document.getElementById('audioModeBtn').toggleAttribute('hidden', which==='audio');
+  document.getElementById('ytFrame').style.display = which === 'yt' ? 'block' : 'none';
+  document.getElementById('localVideoFrame').style.display = which === 'video' ? 'block' : 'none';
+  document.getElementById('audioOnlyFrame').style.display = which === 'audio' ? 'flex' : 'none';
+  document.getElementById('audioModeBtn').toggleAttribute('hidden', which === 'audio');
 }
 
-/* ---------- transcrição: leitura de SRT, VTT ou texto copiado do YouTube ---------- */
+/* =====================================================================
+   TRANSCRIÇÃO: SRT, VTT ou texto copiado do YouTube
+   ===================================================================== */
 function toSec(h, m, s, f){
   const hours = h ? parseInt(h, 10) : 0;
   const frac = f ? parseInt(f, 10) / Math.pow(10, String(f).length) : 0;
@@ -589,7 +729,6 @@ function parseTranscript(raw){
   const cues = [];
   let found = false;
 
-  // SRT / VTT: blocos com linha "início --> fim" seguida do texto
   for(const block of text.split(/\n\s*\n/)){
     const lines = block.split('\n');
     const idx = lines.findIndex(l => tsRe.test(l));
@@ -603,7 +742,6 @@ function parseTranscript(raw){
     });
   }
 
-  // Texto copiado do painel de transcrição do YouTube: linha de tempo (0:12) seguida do texto
   if(!found){
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const tRe = /^(\d{1,2}:)?(\d{1,2}):(\d{2})$/;
@@ -625,19 +763,18 @@ function parseTranscript(raw){
     }));
   }
 
-  // Remove repetições das legendas automáticas do YouTube (linhas que se repetem ou se completam)
+  /* remove repetições das legendas automáticas do YouTube */
   const out = [];
   for(const c of cues){
     if(!c.text) continue;
     const prev = out[out.length - 1];
     if(prev && c.text === prev.text){ prev.end = Math.max(prev.end, c.end); continue; }
     if(prev && c.text.startsWith(prev.text)){ prev.text = c.text; prev.end = Math.max(prev.end, c.end); continue; }
-    out.push({ ...c });
+    out.push({ start: c.start, end: c.end, text: c.text });
   }
   return out;
 }
 function groupSentences(cues){
-  // junta legendas curtas até encontrar pontuação final (ou 3 legendas)
   const out = [];
   let cur = null;
   for(const c of cues){
@@ -660,40 +797,38 @@ async function applyTranscript(raw){
   }
   if(!engine){ alert('Abra primeiro um vídeo ou áudio para usar a transcrição.'); return; }
   transcriptRaw = raw;
-  await localDB.set(`transcript:${currentKey}`, raw, false);
+  localDB.set('transcript:' + currentKey, raw);
   segments = sentences;
-  totalBlocks = segments.length;
   visited.clear();
   await preloadNoteFlags();
   currentBlock = 0;
+  totalBlocks = segments.length;
   buildTimeline();
   seekToBlock(0, true);
   updateTranscriptMode();
 }
 
 async function removeTranscript(){
-  try{ await localDB.delete(`transcript:${currentKey}`, false); }catch(e){}
+  localDB.del('transcript:' + currentKey);
   segments = null; transcriptRaw = '';
   document.getElementById('transcriptInput').value = '';
-  totalBlocks = totalUnits();
   visited.clear();
   await preloadNoteFlags();
   currentBlock = 0;
+  totalBlocks = totalUnits();
   buildTimeline();
   seekToBlock(0, true);
   updateTranscriptMode();
 }
 
-async function loadTranscriptForSource(){
+function loadTranscriptForSource(){
   segments = null; transcriptRaw = '';
-  try{
-    const r = await localDB.get(`transcript:${currentKey}`, false);
-    if(r && r.value){
-      transcriptRaw = r.value;
-      const sentences = groupSentences(parseTranscript(r.value));
-      if(sentences.length) segments = sentences;
-    }
-  }catch(e){}
+  const raw = localDB.get('transcript:' + currentKey);
+  if(raw){
+    transcriptRaw = raw;
+    const sentences = groupSentences(parseTranscript(raw));
+    if(sentences.length) segments = sentences;
+  }
   document.getElementById('transcriptInput').value = transcriptRaw;
   updateTranscriptMode();
 }
@@ -712,6 +847,13 @@ function updateTranscriptMode(){
   updateSentenceCard();
 }
 
+function updateSentenceCard(){
+  if(!segments) return;
+  document.getElementById('sentLabel').textContent = `Frase ${currentBlock + 1} de ${segments.length}`;
+  document.getElementById('sentCur').textContent = segments[currentBlock] ? segments[currentBlock].text : '';
+  document.getElementById('sentNext').textContent = segments[currentBlock + 1] ? segments[currentBlock + 1].text : '— fim —';
+}
+
 document.getElementById('applyTranscriptBtn').addEventListener('click', () => {
   const raw = document.getElementById('transcriptInput').value;
   if(!raw.trim()){ alert('Cole a transcrição ou carregue um arquivo primeiro.'); return; }
@@ -727,38 +869,32 @@ document.getElementById('fileTranscript').addEventListener('change', (e) => {
   reader.readAsText(file);
 });
 
-function updateSentenceCard(){
-  if(!segments) return;
-  document.getElementById('sentLabel').textContent = `Frase ${currentBlock + 1} de ${segments.length}`;
-  document.getElementById('sentCur').textContent = segments[currentBlock] ? segments[currentBlock].text : '';
-  document.getElementById('sentNext').textContent = segments[currentBlock + 1] ? segments[currentBlock + 1].text : '— fim —';
-}
-
-/* ---------- núcleo compartilhado ---------- */
-function fmt(sec){ sec = Math.max(0, Math.round(sec)); const m = Math.floor(sec/60); const s = sec%60; return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0'); }
-
+/* =====================================================================
+   NÚCLEO: SOURCE, PROGRESSO, ANOTAÇÕES, TEMPO
+   ===================================================================== */
 function resetForNewSource(key){
   currentBlock = 0; visited.clear(); notesWithContent.clear();
   currentKey = key; savedStudySeconds = 0; sessionSeconds = 0; duration = 0;
   segments = null; transcriptRaw = '';
   document.getElementById('statGlobal').style.display = 'none';
   document.getElementById('globalTotalBtn').style.display = 'inline';
+  document.getElementById('globalTotalBtn').textContent = 'ver tempo total estudado';
 }
 
 async function initAfterEngineReady(){
   duration = engine.getDuration() || 0;
-  await loadTranscriptForSource();
+  loadTranscriptForSource();
   totalBlocks = totalUnits();
   await preloadNoteFlags();
-  await loadStudyTime();
-  await loadBilingualTexts();
+  loadStudyTime();
+  loadBilingualTexts();
   buildTimeline();
   let resumeBlock = 0;
   try{
-    const prog = await localDB.get(`progress:${currentKey}`, false);
-    if(prog && prog.value){
-      const parsed = JSON.parse(prog.value);
-      if(typeof parsed.currentBlock === 'number') resumeBlock = Math.min(parsed.currentBlock, totalBlocks - 1);
+    const raw = localDB.get('progress:' + currentKey);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(typeof parsed.currentBlock === 'number') resumeBlock = Math.min(parsed.currentBlock, Math.max(0, totalBlocks - 1));
       if(Array.isArray(parsed.visited)) visited = new Set(parsed.visited);
     }
   }catch(e){}
@@ -766,22 +902,24 @@ async function initAfterEngineReady(){
   startLoopWatcher();
 }
 
-async function preloadNoteFlags(){
+function preloadNoteFlags(){
   notesWithContent.clear();
-  try{
-    const res = await localDB.list(`notes:${currentKey}:`, false);
-    if(res && res.keys) res.keys.forEach(k => { const idx = parseInt(k.split(':').pop(), 10); if(!isNaN(idx)) notesWithContent.add(idx); });
-  }catch(e){}
+  localDB.keys('notes:' + currentKey + ':').forEach(k => {
+    const idx = parseInt(k.split(':').pop(), 10);
+    if(!isNaN(idx)) notesWithContent.add(idx);
+  });
 }
-async function loadStudyTime(){
-  try{ const res = await localDB.get(`studytime:${currentKey}`, false); savedStudySeconds = res && res.value ? parseFloat(res.value) : 0; }catch(e){ savedStudySeconds = 0; }
+function loadStudyTime(){
+  const raw = localDB.get('studytime:' + currentKey);
+  savedStudySeconds = raw ? parseFloat(raw) || 0 : 0;
 }
 
 function buildTimeline(){
   const tl = document.getElementById('timeline');
   tl.innerHTML = '';
-  for(let i=0; i<totalBlocks; i++){
-    const b = document.createElement('div'); b.className = 'block'; b.dataset.index = i;
+  for(let i = 0; i < totalBlocks; i++){
+    const b = document.createElement('div');
+    b.className = 'block'; b.dataset.index = i;
     b.addEventListener('click', () => seekToBlock(i, true));
     tl.appendChild(b);
   }
@@ -800,24 +938,27 @@ function refreshTimelineHighlight(){
 }
 function refreshTimeDisplay(){ document.getElementById('statTime').textContent = fmt(savedStudySeconds + sessionSeconds); }
 
-async function saveProgress(){ try{ await localDB.set(`progress:${currentKey}`, JSON.stringify({ currentBlock, visited: Array.from(visited) }), false); }catch(e){} }
-async function saveNote(index, text){
-  const status = document.getElementById('saveStatus');
-  try{
-    if(text && text.trim()){ await localDB.set(`notes:${currentKey}:${index}`, text, false); notesWithContent.add(index); }
-    else{ await localDB.delete(`notes:${currentKey}:${index}`, false); notesWithContent.delete(index); }
-    status.textContent = 'salvo'; status.classList.add('show');
-    setTimeout(() => status.classList.remove('show'), 1200);
-    refreshTimelineHighlight();
-  }catch(e){}
-}
-async function loadNote(index){ try{ const res = await localDB.get(`notes:${currentKey}:${index}`, false); return res && res.value ? res.value : ''; }catch(e){ return ''; } }
+function saveProgress(){ localDB.set('progress:' + currentKey, JSON.stringify({ currentBlock, visited: Array.from(visited) })); }
 
-function flushCurrentNote(){ const box = document.getElementById('noteBox'); if(saveDebounce) clearTimeout(saveDebounce); saveNote(currentBlock, box.value); }
-async function flushStudyTime(){
-  if(sessionSeconds <= 0) return;
+function saveNote(index, text){
+  const status = document.getElementById('saveStatus');
+  if(text && text.trim()){ localDB.set(`notes:${currentKey}:${index}`, text); notesWithContent.add(index); }
+  else { localDB.del(`notes:${currentKey}:${index}`); notesWithContent.delete(index); }
+  status.textContent = 'salvo'; status.classList.add('show');
+  setTimeout(() => status.classList.remove('show'), 1200);
+  refreshTimelineHighlight();
+}
+function loadNote(index){ return localDB.get(`notes:${currentKey}:${index}`) || ''; }
+
+function flushCurrentNote(){
+  const box = document.getElementById('noteBox');
+  if(saveDebounce) clearTimeout(saveDebounce);
+  if(currentKey) saveNote(currentBlock, box.value);
+}
+function flushStudyTime(){
+  if(sessionSeconds <= 0 || !currentKey) return;
   savedStudySeconds += sessionSeconds; sessionSeconds = 0;
-  try{ await localDB.set(`studytime:${currentKey}`, String(savedStudySeconds), false); }catch(e){}
+  localDB.set('studytime:' + currentKey, String(savedStudySeconds));
 }
 
 function showUnitTimes(){
@@ -826,28 +967,29 @@ function showUnitTimes(){
   document.getElementById('tEnd').textContent = fmt(unitEnd(currentBlock));
 }
 
-async function seekToBlock(index, play){
-  flushCurrentNote(); await flushStudyTime();
+function seekToBlock(index, play){
+  flushCurrentNote(); flushStudyTime();
   currentBlock = Math.max(0, Math.min(index, totalBlocks - 1));
   blockRepeatCount = 0;
   visited.add(currentBlock);
   if(engine){
-    engine.seekTo(unitStart(currentBlock)); engine.setRate(currentRate);
+    engine.seekTo(unitStart(currentBlock));
+    engine.setRate(currentRate);
     if(play !== false) engine.play();
   }
   showUnitTimes();
   refreshTimelineHighlight(); refreshTimeDisplay(); saveProgress();
-  document.getElementById('noteBox').value = await loadNote(currentBlock);
+  document.getElementById('noteBox').value = loadNote(currentBlock);
 }
 
-async function advanceBlockDisplay(index){
+function advanceBlockDisplay(index){
   flushCurrentNote();
   currentBlock = Math.max(0, Math.min(index, totalBlocks - 1));
   blockRepeatCount = 0;
   visited.add(currentBlock);
   showUnitTimes();
   refreshTimelineHighlight(); saveProgress();
-  document.getElementById('noteBox').value = await loadNote(currentBlock);
+  document.getElementById('noteBox').value = loadNote(currentBlock);
 }
 
 function startLoopWatcher(){
@@ -858,19 +1000,16 @@ function startLoopWatcher(){
     const blockEnd = unitEnd(currentBlock);
     if(t >= blockEnd - 0.15){
       if(playbackMode === 'loop'){
-        // Modo 01: repete o mesmo bloco (ou frase) em loop até o usuário avançar
         engine.seekTo(unitStart(currentBlock));
       } else if(playbackMode === 'repeatN'){
-        // Modo 02: repete N vezes, depois avança sozinho
         blockRepeatCount++;
         if(blockRepeatCount >= repeatTarget){
           if(currentBlock < totalBlocks - 1){ seekToBlock(currentBlock + 1, true); }
-          else{ blockRepeatCount = 0; engine.seekTo(unitStart(currentBlock)); }
+          else { blockRepeatCount = 0; engine.seekTo(unitStart(currentBlock)); }
         } else {
           engine.seekTo(unitStart(currentBlock));
         }
       } else if(playbackMode === 'continuous'){
-        // Modo 03: toca direto, só atualiza qual bloco/frase está passando
         if(currentBlock < totalBlocks - 1){ advanceBlockDisplay(currentBlock + 1); }
       }
     }
@@ -881,14 +1020,20 @@ function startLoopWatcher(){
   }, 200);
 }
 
+/* =====================================================================
+   CONTROLES
+   ===================================================================== */
 document.getElementById('nextBtn').addEventListener('click', () => seekToBlock(currentBlock + 1, true));
 document.getElementById('prevBtn').addEventListener('click', () => seekToBlock(currentBlock - 1, true));
 document.getElementById('repeatBtn').addEventListener('click', () => seekToBlock(currentBlock, true));
-document.getElementById('playPauseBtn').addEventListener('click', () => { if(!engine) return; if(engine.isPlaying()) engine.pause(); else engine.play(); });
-function activeOverlay(){ return mode==='youtube' ? document.getElementById('audioOverlayYt') : document.getElementById('audioOverlayVideo'); }
+document.getElementById('playPauseBtn').addEventListener('click', () => {
+  if(!engine) return;
+  if(engine.isPlaying()) engine.pause(); else engine.play();
+});
+
+function activeOverlay(){ return mode === 'youtube' ? document.getElementById('audioOverlayYt') : document.getElementById('audioOverlayVideo'); }
 document.getElementById('audioModeBtn').addEventListener('click', () => {
-  const overlay = activeOverlay();
-  const on = overlay.classList.toggle('on');
+  const on = activeOverlay().classList.toggle('on');
   document.getElementById('audioModeBtn').classList.toggle('toggled', on);
 });
 document.getElementById('audioOverlayYt').addEventListener('click', () => document.getElementById('audioModeBtn').click());
@@ -903,7 +1048,6 @@ document.querySelectorAll('.speed-btn[data-rate]').forEach(btn => {
   });
 });
 
-/* ---------- modo de reprodução (01 loop / 02 repetir N / 03 direto) ---------- */
 const repeatCountInput = document.getElementById('repeatCountInput');
 document.querySelectorAll('.mode-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -912,66 +1056,77 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.classList.add('active');
     repeatCountInput.style.display = playbackMode === 'repeatN' ? 'inline-block' : 'none';
     blockRepeatCount = 0;
-    localDB.set('playbackMode', playbackMode, false).catch(()=>{});
+    localDB.set('playbackMode', playbackMode);
   });
 });
 repeatCountInput.addEventListener('change', () => {
   repeatTarget = Math.max(1, parseInt(repeatCountInput.value, 10) || 3);
   repeatCountInput.value = repeatTarget;
   blockRepeatCount = 0;
-  localDB.set('repeatTarget', String(repeatTarget), false).catch(()=>{});
+  localDB.set('repeatTarget', String(repeatTarget));
 });
-(async function restorePlaybackModePref(){
-  try{
-    const m = await localDB.get('playbackMode', false);
-    if(m && m.value){
-      playbackMode = m.value;
-      const btn = document.querySelector(`.mode-btn[data-mode="${playbackMode}"]`);
-      if(btn){ document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
-      repeatCountInput.style.display = playbackMode === 'repeatN' ? 'inline-block' : 'none';
-    }
-    const r = await localDB.get('repeatTarget', false);
-    if(r && r.value){ repeatTarget = parseInt(r.value, 10) || 3; repeatCountInput.value = repeatTarget; }
-  }catch(e){}
+
+/* restaura preferências salvas */
+(function restorePrefs(){
+  const m = localDB.get('playbackMode');
+  if(m){
+    playbackMode = m;
+    const btn = document.querySelector(`.mode-btn[data-mode="${playbackMode}"]`);
+    if(btn){ document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+    repeatCountInput.style.display = playbackMode === 'repeatN' ? 'inline-block' : 'none';
+  }
+  const r = localDB.get('repeatTarget');
+  if(r){ repeatTarget = parseInt(r, 10) || 3; repeatCountInput.value = repeatTarget; }
 })();
 
 const noteBox = document.getElementById('noteBox');
-noteBox.addEventListener('input', () => { if(saveDebounce) clearTimeout(saveDebounce); saveDebounce = setTimeout(() => saveNote(currentBlock, noteBox.value), 700); });
-
-document.getElementById('globalTotalBtn').addEventListener('click', async () => {
-  const btn = document.getElementById('globalTotalBtn'); const out = document.getElementById('statGlobal');
-  btn.textContent = 'calculando...';
-  try{
-    const res = await localDB.list('studytime:', false);
-    let total = 0;
-    if(res && res.keys) for(const k of res.keys){ const v = await localDB.get(k, false); if(v && v.value) total += parseFloat(v.value) || 0; }
-    total += sessionSeconds;
-    out.textContent = fmt(total) + ' (todas as faixas)'; out.style.display = 'inline'; btn.style.display = 'none';
-  }catch(e){ btn.textContent = 'sem dados ainda'; }
+noteBox.addEventListener('input', () => {
+  if(saveDebounce) clearTimeout(saveDebounce);
+  saveDebounce = setTimeout(() => saveNote(currentBlock, noteBox.value), 700);
 });
 
-/* ---------- leitura bilíngue ---------- */
+document.getElementById('globalTotalBtn').addEventListener('click', () => {
+  const btn = document.getElementById('globalTotalBtn');
+  const out = document.getElementById('statGlobal');
+  let total = 0;
+  localDB.keys('studytime:').forEach(k => { total += parseFloat(localDB.get(k) || '0') || 0; });
+  total += sessionSeconds;
+  out.textContent = fmt(total) + ' (todas as faixas)';
+  out.style.display = 'inline';
+  btn.style.display = 'none';
+});
+
+/* =====================================================================
+   LEITURA BILÍNGUE E DICIONÁRIO
+   ===================================================================== */
 const textEn = document.getElementById('textEn');
 const textPt = document.getElementById('textPt');
-async function loadBilingualTexts(){
-  try{ const r = await localDB.get(`fulltext_en:${currentKey}`, false); textEn.value = r && r.value ? r.value : ''; }catch(e){ textEn.value=''; }
-  try{ const r = await localDB.get(`fulltext_pt:${currentKey}`, false); textPt.value = r && r.value ? r.value : ''; }catch(e){ textPt.value=''; }
+function loadBilingualTexts(){
+  textEn.value = localDB.get('fulltext_en:' + currentKey) || '';
+  textPt.value = localDB.get('fulltext_pt:' + currentKey) || '';
 }
-async function saveBilingual(lang, text){
-  const key = lang==='en' ? `fulltext_en:${currentKey}` : `fulltext_pt:${currentKey}`;
-  try{ if(text && text.trim()) await localDB.set(key, text, false); else await localDB.delete(key, false); }catch(e){}
+function saveBilingual(lang, text){
+  if(!currentKey) return;
+  const key = (lang === 'en' ? 'fulltext_en:' : 'fulltext_pt:') + currentKey;
+  if(text && text.trim()) localDB.set(key, text); else localDB.del(key);
 }
-textEn.addEventListener('input', () => { if(!currentKey) return; if(enDebounce) clearTimeout(enDebounce); enDebounce = setTimeout(() => saveBilingual('en', textEn.value), 700); });
-textPt.addEventListener('input', () => { if(!currentKey) return; if(ptDebounce) clearTimeout(ptDebounce); ptDebounce = setTimeout(() => saveBilingual('pt', textPt.value), 700); });
+textEn.addEventListener('input', () => {
+  if(enDebounce) clearTimeout(enDebounce);
+  enDebounce = setTimeout(() => saveBilingual('en', textEn.value), 700);
+});
+textPt.addEventListener('input', () => {
+  if(ptDebounce) clearTimeout(ptDebounce);
+  ptDebounce = setTimeout(() => saveBilingual('pt', textPt.value), 700);
+});
 
 document.getElementById('uploadEnBtn').addEventListener('click', () => document.getElementById('fileEn').click());
 document.getElementById('uploadPtBtn').addEventListener('click', () => document.getElementById('filePt').click());
 document.getElementById('fileEn').addEventListener('change', (e) => readTextFile(e.target.files[0], textEn, 'en'));
 document.getElementById('filePt').addEventListener('change', (e) => readTextFile(e.target.files[0], textPt, 'pt'));
-function readTextFile(file, targetTextarea, lang){
+function readTextFile(file, target, lang){
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = () => { targetTextarea.value = reader.result; if(currentKey) saveBilingual(lang, reader.result); };
+  reader.onload = () => { target.value = reader.result; saveBilingual(lang, reader.result); };
   reader.readAsText(file);
 }
 
@@ -983,40 +1138,36 @@ document.getElementById('openReadingBtn').addEventListener('click', () => {
   readingOverlay.classList.add('show');
 });
 
-/* ---------- hover-to-define (inglês) ---------- */
 const defCache = new Map();
 const defPopup = document.getElementById('defPopup');
 const defPopupBody = document.getElementById('defPopupBody');
 document.getElementById('defPopupClose').addEventListener('click', () => defPopup.classList.remove('show'));
 
-function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
 function renderHoverableEnglish(text){
   const container = document.getElementById('readEnText');
   if(!text || !text.trim()){ container.textContent = '(sem texto em inglês)'; return; }
-  const parts = text.split(/(\s+)/);
-  const html = parts.map(part => {
+  container.innerHTML = text.split(/(\s+)/).map(part => {
     if(/^\s+$/.test(part) || part === '') return escapeHtml(part);
-    const cleanMatch = part.match(/[A-Za-zÀ-ÖØ-öø-ÿ']+/);
-    if(!cleanMatch) return escapeHtml(part);
-    const clean = cleanMatch[0];
+    const m = part.match(/[A-Za-zÀ-ÖØ-öø-ÿ']+/);
+    if(!m) return escapeHtml(part);
+    const clean = m[0];
     const idx = part.indexOf(clean);
     const lead = part.slice(0, idx), trail = part.slice(idx + clean.length);
-    return `${escapeHtml(lead)}<span class="hw" data-word="${clean.toLowerCase()}">${escapeHtml(clean)}</span>${escapeHtml(trail)}`;
+    return `${escapeHtml(lead)}<span class="hw" data-word="${escapeHtml(clean.toLowerCase())}">${escapeHtml(clean)}</span>${escapeHtml(trail)}`;
   }).join('');
-  container.innerHTML = html;
 }
 
 function positionPopup(anchorEl){
   const rect = anchorEl.getBoundingClientRect();
-  const top = Math.min(rect.bottom + 8, window.innerHeight - 190);
-  const left = Math.max(8, Math.min(rect.left, window.innerWidth - 316));
-  defPopup.style.top = top + 'px';
-  defPopup.style.left = left + 'px';
+  defPopup.style.top = Math.min(rect.bottom + 8, window.innerHeight - 190) + 'px';
+  defPopup.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 316)) + 'px';
 }
 
 function renderDefinition(word, data){
-  if(!data){ defPopupBody.innerHTML = `<div class="dp-word">${escapeHtml(word)}</div><div class="dp-def">Não encontrei esse termo — pode ser gíria, nome próprio ou expressão composta (tenta buscar só uma das palavras, se for expressão).</div>`; return; }
+  if(!data){
+    defPopupBody.innerHTML = `<div class="dp-word">${escapeHtml(word)}</div><div class="dp-def">Não encontrei esse termo — pode ser gíria, nome próprio ou expressão composta.</div>`;
+    return;
+  }
   const entry = data[0];
   const phoneticObj = (entry.phonetics || []).find(p => p.text);
   const phonetic = entry.phonetic || (phoneticObj && phoneticObj.text) || '';
@@ -1052,14 +1203,12 @@ async function lookupWord(word, anchorEl){
 const readEnTextEl = document.getElementById('readEnText');
 readEnTextEl.addEventListener('click', (e) => {
   const target = e.target.closest('.hw');
-  if(!target) return;
-  lookupWord(target.dataset.word, target);
+  if(target) lookupWord(target.dataset.word, target);
 });
 readEnTextEl.addEventListener('mouseover', (e) => {
   if(window.matchMedia('(hover: none)').matches) return;
   const target = e.target.closest('.hw');
-  if(!target) return;
-  lookupWord(target.dataset.word, target);
+  if(target) lookupWord(target.dataset.word, target);
 });
 document.addEventListener('click', (e) => {
   if(!defPopup.contains(e.target) && !e.target.closest('.hw')) defPopup.classList.remove('show');
@@ -1067,14 +1216,18 @@ document.addEventListener('click', (e) => {
 document.getElementById('closeReadingBtn').addEventListener('click', () => readingOverlay.classList.remove('show'));
 document.getElementById('readPlayBtn').addEventListener('click', () => {
   if(!engine) return;
-  if(engine.isPlaying()){ engine.pause(); document.getElementById('readPlayBtn').textContent='Tocar'; }
-  else{ engine.play(); document.getElementById('readPlayBtn').textContent='Pausar'; }
+  if(engine.isPlaying()){ engine.pause(); document.getElementById('readPlayBtn').textContent = 'Tocar'; }
+  else { engine.play(); document.getElementById('readPlayBtn').textContent = 'Pausar'; }
 });
-document.getElementById('readNextBtn').addEventListener('click', () => { if(engine) engine.seekTo(Math.min(engine.getCurrentTime()+10, duration)); });
-document.getElementById('readPrevBtn').addEventListener('click', () => { if(engine) engine.seekTo(Math.max(engine.getCurrentTime()-10, 0)); });
+document.getElementById('readNextBtn').addEventListener('click', () => { if(engine) engine.seekTo(Math.min(engine.getCurrentTime() + 10, duration)); });
+document.getElementById('readPrevBtn').addEventListener('click', () => { if(engine) engine.seekTo(Math.max(engine.getCurrentTime() - 10, 0)); });
 
+/* =====================================================================
+   ATALHOS DE TECLADO
+   ===================================================================== */
 document.addEventListener('keydown', (e) => {
-  if(document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
+  const tag = document.activeElement.tagName;
+  if(tag === 'TEXTAREA' || tag === 'INPUT') return;
   if(readingOverlay.classList.contains('show')) return;
   if(e.code === 'Space'){ e.preventDefault(); document.getElementById('playPauseBtn').click(); }
   if(e.code === 'ArrowRight') document.getElementById('nextBtn').click();
@@ -1085,27 +1238,20 @@ document.addEventListener('keydown', (e) => {
 
 window.addEventListener('beforeunload', () => { flushCurrentNote(); flushStudyTime(); });
 
-/* ---------- PWA: registro do service worker ---------- */
+/* =====================================================================
+   PWA
+   ===================================================================== */
 if('serviceWorker' in navigator){
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  });
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 }
 
-/* ---------- instalar no celular ---------- */
-function isStandalone(){
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-}
-function isIOS(){
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
+function isStandalone(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
 const installBtn = document.getElementById('installBtn');
 const installModal = document.getElementById('installModal');
 let deferredInstallPrompt = null;
 
-if(!isStandalone()){
-  installBtn.style.display = 'inline-flex';
-}
+if(!isStandalone()) installBtn.style.display = 'inline-flex';
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredInstallPrompt = e;
@@ -1127,142 +1273,43 @@ installBtn.addEventListener('click', async () => {
   document.getElementById('installModalBody').innerHTML = isIOS()
     ? `<h4>Instalar no iPhone</h4>
        <ol>
-         <li>Abra este link no <strong>Safari</strong> (tem que ser o Safari, não funciona pelo app de outro navegador ou dentro de outro app).</li>
-         <li>Toque no ícone de compartilhar <span class="im-icon">⬆️ □</span> na barra inferior (ou superior, dependendo do modelo).</li>
-         <li>Role a lista e toque em <strong>"Adicionar à Tela de Início"</strong>.</li>
+         <li>Abra este link no <strong>Safari</strong>.</li>
+         <li>Toque no ícone de compartilhar <span class="im-icon">⬆️ □</span>.</li>
+         <li>Toque em <strong>"Adicionar à Tela de Início"</strong>.</li>
          <li>Toque em <strong>"Adicionar"</strong> no canto superior direito.</li>
-       </ol>
-       <p style="margin-top:14px; color:var(--muted); font-size:12px;">Depois disso, o ícone REPETE aparece na sua tela inicial como qualquer outro app, abrindo em tela cheia.</p>`
+       </ol>`
     : `<h4>Instalar no celular</h4>
        <ol>
-         <li>Toque no menu do navegador <span class="im-icon">⋮</span> (três pontinhos, geralmente no canto superior direito).</li>
+         <li>Toque no menu do navegador <span class="im-icon">⋮</span>.</li>
          <li>Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.</li>
          <li>Confirme a instalação.</li>
-       </ol>
-       <p style="margin-top:14px; color:var(--muted); font-size:12px;">O nome da opção pode variar um pouco dependendo do navegador (Chrome, Samsung Internet, etc).</p>`;
+       </ol>`;
   installModal.classList.add('show');
 });
 document.getElementById('installModalClose').addEventListener('click', () => installModal.classList.remove('show'));
 installModal.addEventListener('click', (e) => { if(e.target === installModal) installModal.classList.remove('show'); });
-</script>
 
-<!-- ===== BIBLIOTECA DE VÍDEOS ===== -->
-<script>
-(function(){
-  const KEY = 'videoLibrary';
-  const loadBtn = document.getElementById('loadYtBtn');
-  const ytError = document.getElementById('ytError');
-  let lib = [];
+/* =====================================================================
+   INICIALIZAÇÃO
+   ===================================================================== */
+loadLibrary();
 
-  const saveBtn = document.createElement('button');
-  saveBtn.className = 'btn-secondary lib-save-btn';
-  saveBtn.textContent = '☆ Salvar na biblioteca';
-  loadBtn.after(saveBtn);
-
-  const box = document.createElement('div');
-  box.className = 'lib-box';
-  box.innerHTML = '<div class="lib-head"><span class="field-label">Meus vídeos em estudo</span><span class="lib-count" id="libCount"></span></div><div id="libList"></div>';
-  ytError.after(box);
-  const listEl = box.querySelector('#libList');
-  const countEl = box.querySelector('#libCount');
-
-  async function loadLib(){
-    try{
-      const r = await localDB.get(KEY);
-      lib = r && r.value ? JSON.parse(r.value) : [];
-      if(!Array.isArray(lib)) lib = [];
-    }catch(e){ lib = []; }
-    render();
-  }
-  function persist(){ return localDB.set(KEY, JSON.stringify(lib)); }
-
-  async function fetchTitle(id){
-    try{
-      const res = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id));
-      if(!res.ok) return '';
-      const data = await res.json();
-      return data.title || '';
-    }catch(e){ return ''; }
-  }
-
-  async function saveCurrent(){
-    const raw = document.getElementById('urlInput').value.trim();
-    const id = extractVideoId(raw);
-    if(!id){ alert('Cole um link válido do YouTube no campo antes de salvar.'); return; }
-    const bs = parseInt(document.getElementById('blockSizeYt').value, 10) || 10;
-    const existing = lib.find(v => v.id === id);
-    if(existing){
-      existing.blockSeconds = bs;
-      existing.url = raw;
-      await persist(); render();
-      flash('Já estava salva — bloco atualizado');
-      return;
+(function restoreLastSource(){
+  const raw = localDB.get('lastSource');
+  if(!raw) return;
+  try{
+    const saved = JSON.parse(raw);
+    if(saved.mode === 'youtube' && saved.url){
+      document.getElementById('urlInput').value = saved.url;
+      document.getElementById('blockSizeYt').value = saved.blockSeconds || 10;
+    } else if(saved.mode === 'local-audio' && saved.name){
+      document.querySelector('.tab-btn[data-tab="audio"]').click();
+      document.getElementById('audioDropLabel').textContent = `Última vez: "${saved.name}" — selecione o mesmo arquivo para continuar`;
+    } else if(saved.mode === 'local-video' && saved.name){
+      document.querySelector('.tab-btn[data-tab="video"]').click();
+      document.getElementById('videoDropLabel').textContent = `Última vez: "${saved.name}" — selecione o mesmo arquivo para continuar`;
     }
-    const item = { id, url: raw, title: '', blockSeconds: bs, added: Date.now() };
-    lib.unshift(item);
-    await persist(); render();
-    flash('Salvo!');
-    const title = await fetchTitle(id);
-    if(title){ item.title = title; await persist(); render(); }
-  }
-
-  function flash(msg){
-    const old = '☆ Salvar na biblioteca';
-    saveBtn.textContent = '✓ ' + msg;
-    setTimeout(() => { saveBtn.textContent = old; }, 1600);
-  }
-
-  function openItem(item){
-    document.querySelector('.tab-btn[data-tab="youtube"]').click();
-    loadYoutubeVideo(item.url, item.blockSeconds || 10);
-    render();
-    setTimeout(() => document.getElementById('playerShell').scrollIntoView({ behavior:'smooth', block:'start' }), 350);
-  }
-
-  async function renameItem(item){
-    const n = prompt('Nome do vídeo:', item.title || '');
-    if(n === null) return;
-    item.title = n.trim();
-    await persist(); render();
-  }
-
-  async function removeItem(item){
-    if(!confirm('Tirar "' + (item.title || item.id) + '" da biblioteca?\n(Suas anotações e o tempo estudado continuam guardados.)')) return;
-    lib = lib.filter(v => v.id !== item.id);
-    await persist(); render();
-  }
-
-  function render(){
-    countEl.textContent = lib.length ? lib.length + (lib.length === 1 ? ' vídeo' : ' vídeos') : '';
-    if(!lib.length){
-      listEl.innerHTML = '<div class="lib-empty">Nenhum vídeo salvo ainda. Cole um link acima e toque em “Salvar na biblioteca”.</div>';
-      return;
-    }
-    listEl.innerHTML = '';
-    lib.forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'lib-item' + (currentKey === item.id ? ' active' : '');
-      row.innerHTML =
-        '<img class="lib-thumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/' + item.id + '/mqdefault.jpg">' +
-        '<div class="lib-info"><div class="lib-title">' + escapeHtml(item.title || 'Vídeo ' + item.id) + '</div>' +
-        '<div class="lib-meta">bloco ' + item.blockSeconds + 's · <span class="lib-time">—</span></div></div>' +
-        '<div class="lib-actions"><button class="lib-open">Abrir</button><button class="lib-ren" title="Renomear">✎</button><button class="lib-del" title="Remover">✕</button></div>';
-      row.querySelector('.lib-open').onclick = () => openItem(item);
-      row.querySelector('.lib-thumb').onclick = () => openItem(item);
-      row.querySelector('.lib-title').onclick = () => openItem(item);
-      row.querySelector('.lib-ren').onclick = () => renameItem(item);
-      row.querySelector('.lib-del').onclick = () => removeItem(item);
-      listEl.appendChild(row);
-      localDB.get('studytime:' + item.id).then(r => {
-        const s = r && r.value ? parseFloat(r.value) : 0;
-        row.querySelector('.lib-time').textContent = s > 0 ? fmt(s) + ' estudados' : 'ainda não estudado';
-      });
-    });
-  }
-
-  saveBtn.addEventListener('click', saveCurrent);
-  loadBtn.addEventListener('click', () => setTimeout(render, 400));
-  loadLib();
+  }catch(e){}
 })();
 </script>
 </body>
