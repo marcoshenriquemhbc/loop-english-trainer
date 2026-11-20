@@ -77,8 +77,17 @@
   .status-bar .block-label{ font-size: 11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.1em; }
   .status-bar .block-time{ font-size: 20px; color: var(--text); font-weight: 700; }
   .status-bar .block-time em{ color: var(--crimson); font-style: normal; }
-  .timeline{ display:flex; gap: 2px; padding: 12px 16px 4px; }
-  .block{ flex: 1 1 0; height: 22px; background: var(--surface-2); border-radius: 2px; cursor: pointer; position: relative; transition: background .12s ease; }
+
+  /* cartão da frase (modo transcrição) */
+  .sentence-card{ display:none; margin: 14px 16px 0; padding:16px; background:var(--surface-2); border:1px solid var(--line); border-left:3px solid var(--crimson); border-radius:4px; }
+  .sentence-card.on{ display:block; }
+  .sent-label{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:8px; }
+  .sent-cur{ font-size:18px; line-height:1.5; color:var(--text); font-weight:500; min-height:54px; }
+  .sent-next{ font-size:13px; line-height:1.4; color:var(--muted); margin-top:10px; }
+  .sent-next .sn-tag{ font-family:'JetBrains Mono', monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; margin-right:6px; }
+
+  .timeline{ display:flex; gap: 2px; padding: 12px 16px 4px; overflow-x:auto; }
+  .block{ flex: 1 1 0; min-width:4px; height: 22px; background: var(--surface-2); border-radius: 2px; cursor: pointer; position: relative; transition: background .12s ease; }
   .block:hover{ background: #2c2c33; }
   .block.visited{ background: var(--crimson-dim); }
   .block.current{ background: var(--crimson); box-shadow: 0 0 10px rgba(220,47,79,0.6); }
@@ -110,6 +119,12 @@
   textarea{ width:100%; min-height: 80px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); border-radius:4px; padding:12px; font-family:'Inter',sans-serif; font-size:14px; line-height:1.5; resize: vertical; outline:none; }
   textarea:focus{ border-color: var(--crimson); }
 
+  /* ---- transcrição ---- */
+  .transcript-section{ border-top: 1px solid var(--line); padding: 16px; }
+  .transcript-section textarea{ min-height:110px; }
+  .transcript-actions{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .transcript-mode{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--amber); text-transform:uppercase; letter-spacing:.08em; margin-left:auto; }
+
   /* ---- leitura bilíngue ---- */
   .bilingual-section{ border-top: 1px solid var(--line); padding: 16px; }
   .bilingual-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; }
@@ -117,6 +132,7 @@
   .lang-box .field-label{ display:flex; justify-content:space-between; align-items:center; }
   .lang-box textarea{ min-height:100px; }
   .mini-upload{ background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); padding: 5px 10px; font-size: 10px; }
+  .mini-upload:hover{ border-color: var(--crimson); }
   .open-reading-btn{ background: var(--crimson); color:#fff; padding: 12px 20px; font-size:13px; margin-top:14px; width:100%; }
 
   .reading-overlay{ position:fixed; inset:0; background: var(--bg); z-index: 999; display:none; flex-direction:column; }
@@ -182,7 +198,7 @@
 <div class="wrap">
   <div class="eyebrow">LOOP TRAINER</div>
   <h1>REPE<span>TE</span>.</h1>
-  <div class="sub">Cole um link, ou suba um áudio/vídeo do aparelho. Toca em blocos fixos, em loop, até você mandar avançar.</div>
+  <div class="sub">Cole um link, ou suba um áudio/vídeo do aparelho. Toca em blocos fixos, em loop, até você mandar avançar — ou, com a transcrição, frase a frase para shadowing.</div>
   <button class="install-btn" id="installBtn" style="display:none;">📲 Instalar no celular</button>
 
   <div class="tabs">
@@ -239,6 +255,13 @@
       <span class="block-label">Bloco <span id="blockIndex">1</span> / <span id="blockTotal">—</span></span>
       <span class="block-time"><em id="tStart">00:00</em> — <span id="tEnd">00:10</span></span>
     </div>
+
+    <div class="sentence-card" id="sentenceCard">
+      <div class="sent-label" id="sentLabel"></div>
+      <div class="sent-cur" id="sentCur"></div>
+      <div class="sent-next"><span class="sn-tag">próxima</span><span id="sentNext"></span></div>
+    </div>
+
     <div class="timeline" id="timeline"></div>
 
     <div class="stats-strip">
@@ -280,8 +303,20 @@
     </div>
 
     <div class="notes-section">
-      <div class="notes-header"><span class="field-label">O que você entendeu neste bloco</span><span id="saveStatus">salvo</span></div>
+      <div class="notes-header"><span class="field-label" id="noteLabel">O que você entendeu neste bloco</span><span id="saveStatus">salvo</span></div>
       <textarea id="noteBox" placeholder="Escreva aqui o que você entendeu ouvindo este bloco..."></textarea>
+    </div>
+
+    <div class="transcript-section">
+      <span class="field-label">Transcrição para shadowing — frase a frase (SRT, VTT ou texto copiado do YouTube)</span>
+      <textarea id="transcriptInput" placeholder="Cole a legenda aqui (SRT, VTT ou o texto copiado do painel de transcrição do YouTube)..."></textarea>
+      <div class="transcript-actions">
+        <button class="mini-upload" id="uploadTranscriptBtn">carregar arquivo</button>
+        <input type="file" id="fileTranscript" class="hidden-input" accept=".srt,.vtt,.txt">
+        <button class="mini-upload" id="applyTranscriptBtn">montar frases</button>
+        <button class="mini-upload" id="clearTranscriptBtn">voltar aos blocos de tempo</button>
+        <span class="transcript-mode" id="transcriptMode"></span>
+      </div>
     </div>
 
     <div class="bilingual-section">
@@ -333,8 +368,6 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 /* ---------- armazenamento local (localStorage) ---------- */
-/* Usa o localStorage do navegador — funciona em qualquer site publicado,
-   diferente da API de armazenamento exclusiva do ambiente de artifacts do Claude. */
 const localDB = {
   async get(key){ const v = localStorage.getItem(key); return v !== null ? { key, value: v } : null; },
   async set(key, value){ try{ localStorage.setItem(key, value); }catch(e){} return { key, value }; },
@@ -353,13 +386,24 @@ let audioEl = null, videoEl = null;
 let engine = null;
 
 let blockSeconds = 10, currentBlock = 0, totalBlocks = 0, duration = 0;
+let segments = null;          // frases vindas da transcrição: [{start, end, text}]
+let transcriptRaw = '';       // texto bruto da transcrição guardado
 let loopInterval = null;
 let visited = new Set(), notesWithContent = new Set();
 let currentKey = null, currentRate = 1;
 let saveDebounce = null, enDebounce = null, ptDebounce = null;
 let savedStudySeconds = 0, sessionSeconds = 0, lastFlush = 0;
-let playbackMode = 'loop'; // 'loop' = Modo 01, 'repeatN' = Modo 02, 'continuous' = Modo 03
+let playbackMode = 'loop';
 let repeatTarget = 3, blockRepeatCount = 0;
+
+/* ---------- unidade de navegação: frase (se houver transcrição) ou bloco de tempo ---------- */
+function totalUnits(){ return segments ? segments.length : Math.max(1, Math.ceil(duration / blockSeconds)); }
+function unitStart(i){ return segments ? segments[i].start : i * blockSeconds; }
+function unitEnd(i){
+  if(segments) return segments[i].end;
+  const e = (i + 1) * blockSeconds;
+  return duration ? Math.min(e, duration) : e;
+}
 
 /* ---------- tabs ---------- */
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -376,8 +420,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 /* ---------- YouTube ---------- */
 function extractVideoId(input){
   input = input.trim();
-  const patterns = [/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/];
-  for(const p of patterns){ const m = input.match(p); if(m) return m[1]; }
+  const m = input.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+  if(m) return m[1];
   if(/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
   return null;
 }
@@ -397,15 +441,13 @@ function loadYoutubeVideo(raw, blockSecondsInput){
 }
 
 document.getElementById('loadYtBtn').addEventListener('click', () => {
-  const raw = document.getElementById('urlInput').value;
-  const blockSecondsInput = document.getElementById('blockSizeYt').value;
-  loadYoutubeVideo(raw, blockSecondsInput);
+  loadYoutubeVideo(document.getElementById('urlInput').value, document.getElementById('blockSizeYt').value);
 });
 
 /* ---------- retomar última fonte após F5 ---------- */
 (async function restoreLastSource(){
   try{
-    const res = await localDB.get('lastSource', false);
+    const res = await localDB.get('lastSource');
     if(!res || !res.value) return;
     const saved = JSON.parse(res.value);
     if(saved.mode === 'youtube' && saved.url){
@@ -419,6 +461,7 @@ document.getElementById('loadYtBtn').addEventListener('click', () => {
     }
   }catch(e){}
 })();
+
 function startYtPlayer(videoId){
   document.getElementById('playerShell').classList.add('active');
   if(ytPlayer){ ytPlayer.loadVideoById(videoId, 0); }
@@ -530,19 +573,182 @@ function showFrame(which){
   document.getElementById('audioModeBtn').toggleAttribute('hidden', which==='audio');
 }
 
+/* ---------- transcrição: leitura de SRT, VTT ou texto copiado do YouTube ---------- */
+function toSec(h, m, s, f){
+  const hours = h ? parseInt(h, 10) : 0;
+  const frac = f ? parseInt(f, 10) / Math.pow(10, String(f).length) : 0;
+  return hours*3600 + parseInt(m, 10)*60 + parseInt(s, 10) + frac;
+}
+function cleanCue(t){
+  return t.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').replace(/\s+/g, ' ').trim();
+}
+function parseTranscript(raw){
+  const text = raw.replace(/\r/g, '').trim();
+  if(!text) return [];
+  const tsRe = /(\d{1,2}:)?(\d{1,2}):(\d{2})[.,](\d{1,3})\s*-->\s*(\d{1,2}:)?(\d{1,2}):(\d{2})[.,](\d{1,3})/;
+  const cues = [];
+  let found = false;
+
+  // SRT / VTT: blocos com linha "início --> fim" seguida do texto
+  for(const block of text.split(/\n\s*\n/)){
+    const lines = block.split('\n');
+    const idx = lines.findIndex(l => tsRe.test(l));
+    if(idx === -1) continue;
+    found = true;
+    const m = lines[idx].match(tsRe);
+    cues.push({
+      start: toSec(m[1], m[2], m[3], m[4]),
+      end: toSec(m[5], m[6], m[7], m[8]),
+      text: cleanCue(lines.slice(idx + 1).join(' '))
+    });
+  }
+
+  // Texto copiado do painel de transcrição do YouTube: linha de tempo (0:12) seguida do texto
+  if(!found){
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const tRe = /^(\d{1,2}:)?(\d{1,2}):(\d{2})$/;
+    const stamps = [];
+    let i = 0;
+    while(i < lines.length){
+      const m = lines[i].match(tRe);
+      if(m){
+        let j = i + 1; const parts = [];
+        while(j < lines.length && !tRe.test(lines[j])){ parts.push(lines[j]); j++; }
+        stamps.push({ start: toSec(m[1], m[2], m[3], '0'), text: cleanCue(parts.join(' ')) });
+        i = j;
+      } else i++;
+    }
+    stamps.forEach((s, k) => cues.push({
+      start: s.start,
+      end: k + 1 < stamps.length ? stamps[k+1].start : s.start + 5,
+      text: s.text
+    }));
+  }
+
+  // Remove repetições das legendas automáticas do YouTube (linhas que se repetem ou se completam)
+  const out = [];
+  for(const c of cues){
+    if(!c.text) continue;
+    const prev = out[out.length - 1];
+    if(prev && c.text === prev.text){ prev.end = Math.max(prev.end, c.end); continue; }
+    if(prev && c.text.startsWith(prev.text)){ prev.text = c.text; prev.end = Math.max(prev.end, c.end); continue; }
+    out.push({ ...c });
+  }
+  return out;
+}
+function groupSentences(cues){
+  // junta legendas curtas até encontrar pontuação final (ou 3 legendas)
+  const out = [];
+  let cur = null;
+  for(const c of cues){
+    if(!cur){ cur = { start: c.start, end: c.end, text: c.text, n: 1 }; }
+    else { cur.text += ' ' + c.text; cur.end = c.end; cur.n++; }
+    if(/[.!?]["')\]]?$/.test(cur.text) || cur.n >= 3){
+      out.push({ start: cur.start, end: cur.end, text: cur.text });
+      cur = null;
+    }
+  }
+  if(cur) out.push({ start: cur.start, end: cur.end, text: cur.text });
+  return out;
+}
+
+async function applyTranscript(raw){
+  const sentences = groupSentences(parseTranscript(raw));
+  if(!sentences.length){
+    alert('Não consegui ler frases nesse texto. Confira se é SRT, VTT ou o texto copiado do YouTube.');
+    return;
+  }
+  if(!engine){ alert('Abra primeiro um vídeo ou áudio para usar a transcrição.'); return; }
+  transcriptRaw = raw;
+  await localDB.set(`transcript:${currentKey}`, raw, false);
+  segments = sentences;
+  totalBlocks = segments.length;
+  visited.clear();
+  await preloadNoteFlags();
+  currentBlock = 0;
+  buildTimeline();
+  seekToBlock(0, true);
+  updateTranscriptMode();
+}
+
+async function removeTranscript(){
+  try{ await localDB.delete(`transcript:${currentKey}`, false); }catch(e){}
+  segments = null; transcriptRaw = '';
+  document.getElementById('transcriptInput').value = '';
+  totalBlocks = totalUnits();
+  visited.clear();
+  await preloadNoteFlags();
+  currentBlock = 0;
+  buildTimeline();
+  seekToBlock(0, true);
+  updateTranscriptMode();
+}
+
+async function loadTranscriptForSource(){
+  segments = null; transcriptRaw = '';
+  try{
+    const r = await localDB.get(`transcript:${currentKey}`, false);
+    if(r && r.value){
+      transcriptRaw = r.value;
+      const sentences = groupSentences(parseTranscript(r.value));
+      if(sentences.length) segments = sentences;
+    }
+  }catch(e){}
+  document.getElementById('transcriptInput').value = transcriptRaw;
+  updateTranscriptMode();
+}
+
+function updateTranscriptMode(){
+  const label = document.getElementById('transcriptMode');
+  const noteLabel = document.getElementById('noteLabel');
+  if(segments){
+    label.textContent = `modo frase · ${segments.length} frases`;
+    noteLabel.textContent = 'O que você entendeu nesta frase';
+  } else {
+    label.textContent = 'modo blocos de tempo';
+    noteLabel.textContent = 'O que você entendeu neste bloco';
+  }
+  document.getElementById('sentenceCard').classList.toggle('on', !!segments);
+  updateSentenceCard();
+}
+
+document.getElementById('applyTranscriptBtn').addEventListener('click', () => {
+  const raw = document.getElementById('transcriptInput').value;
+  if(!raw.trim()){ alert('Cole a transcrição ou carregue um arquivo primeiro.'); return; }
+  applyTranscript(raw);
+});
+document.getElementById('clearTranscriptBtn').addEventListener('click', removeTranscript);
+document.getElementById('uploadTranscriptBtn').addEventListener('click', () => document.getElementById('fileTranscript').click());
+document.getElementById('fileTranscript').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { document.getElementById('transcriptInput').value = reader.result; applyTranscript(reader.result); };
+  reader.readAsText(file);
+});
+
+function updateSentenceCard(){
+  if(!segments) return;
+  document.getElementById('sentLabel').textContent = `Frase ${currentBlock + 1} de ${segments.length}`;
+  document.getElementById('sentCur').textContent = segments[currentBlock] ? segments[currentBlock].text : '';
+  document.getElementById('sentNext').textContent = segments[currentBlock + 1] ? segments[currentBlock + 1].text : '— fim —';
+}
+
 /* ---------- núcleo compartilhado ---------- */
 function fmt(sec){ sec = Math.max(0, Math.round(sec)); const m = Math.floor(sec/60); const s = sec%60; return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0'); }
 
 function resetForNewSource(key){
   currentBlock = 0; visited.clear(); notesWithContent.clear();
   currentKey = key; savedStudySeconds = 0; sessionSeconds = 0; duration = 0;
+  segments = null; transcriptRaw = '';
   document.getElementById('statGlobal').style.display = 'none';
   document.getElementById('globalTotalBtn').style.display = 'inline';
 }
 
 async function initAfterEngineReady(){
   duration = engine.getDuration() || 0;
-  totalBlocks = Math.max(1, Math.ceil(duration / blockSeconds));
+  await loadTranscriptForSource();
+  totalBlocks = totalUnits();
   await preloadNoteFlags();
   await loadStudyTime();
   await loadBilingualTexts();
@@ -552,7 +758,7 @@ async function initAfterEngineReady(){
     const prog = await localDB.get(`progress:${currentKey}`, false);
     if(prog && prog.value){
       const parsed = JSON.parse(prog.value);
-      if(typeof parsed.currentBlock === 'number') resumeBlock = parsed.currentBlock;
+      if(typeof parsed.currentBlock === 'number') resumeBlock = Math.min(parsed.currentBlock, totalBlocks - 1);
       if(Array.isArray(parsed.visited)) visited = new Set(parsed.visited);
     }
   }catch(e){}
@@ -590,6 +796,7 @@ function refreshTimelineHighlight(){
   });
   document.getElementById('statVisited').textContent = `${visited.size}/${totalBlocks}`;
   document.getElementById('statNotes').textContent = `${notesWithContent.size}/${totalBlocks}`;
+  updateSentenceCard();
 }
 function refreshTimeDisplay(){ document.getElementById('statTime').textContent = fmt(savedStudySeconds + sessionSeconds); }
 
@@ -613,17 +820,22 @@ async function flushStudyTime(){
   try{ await localDB.set(`studytime:${currentKey}`, String(savedStudySeconds), false); }catch(e){}
 }
 
+function showUnitTimes(){
+  document.getElementById('blockIndex').textContent = currentBlock + 1;
+  document.getElementById('tStart').textContent = fmt(unitStart(currentBlock));
+  document.getElementById('tEnd').textContent = fmt(unitEnd(currentBlock));
+}
+
 async function seekToBlock(index, play){
   flushCurrentNote(); await flushStudyTime();
   currentBlock = Math.max(0, Math.min(index, totalBlocks - 1));
   blockRepeatCount = 0;
   visited.add(currentBlock);
-  const start = currentBlock * blockSeconds;
-  engine.seekTo(start); engine.setRate(currentRate);
-  if(play !== false) engine.play();
-  document.getElementById('blockIndex').textContent = currentBlock + 1;
-  document.getElementById('tStart').textContent = fmt(start);
-  document.getElementById('tEnd').textContent = fmt(Math.min(start + blockSeconds, duration));
+  if(engine){
+    engine.seekTo(unitStart(currentBlock)); engine.setRate(currentRate);
+    if(play !== false) engine.play();
+  }
+  showUnitTimes();
   refreshTimelineHighlight(); refreshTimeDisplay(); saveProgress();
   document.getElementById('noteBox').value = await loadNote(currentBlock);
 }
@@ -633,10 +845,7 @@ async function advanceBlockDisplay(index){
   currentBlock = Math.max(0, Math.min(index, totalBlocks - 1));
   blockRepeatCount = 0;
   visited.add(currentBlock);
-  const start = currentBlock * blockSeconds;
-  document.getElementById('blockIndex').textContent = currentBlock + 1;
-  document.getElementById('tStart').textContent = fmt(start);
-  document.getElementById('tEnd').textContent = fmt(Math.min(start + blockSeconds, duration));
+  showUnitTimes();
   refreshTimelineHighlight(); saveProgress();
   document.getElementById('noteBox').value = await loadNote(currentBlock);
 }
@@ -646,22 +855,22 @@ function startLoopWatcher(){
   loopInterval = setInterval(() => {
     if(!engine) return;
     const t = engine.getCurrentTime();
-    const blockEnd = (currentBlock + 1) * blockSeconds;
+    const blockEnd = unitEnd(currentBlock);
     if(t >= blockEnd - 0.15){
       if(playbackMode === 'loop'){
-        // Modo 01: repete o mesmo bloco em loop até o usuário avançar manualmente
-        engine.seekTo(currentBlock * blockSeconds);
+        // Modo 01: repete o mesmo bloco (ou frase) em loop até o usuário avançar
+        engine.seekTo(unitStart(currentBlock));
       } else if(playbackMode === 'repeatN'){
-        // Modo 02: repete o bloco N vezes, depois avança sozinho
+        // Modo 02: repete N vezes, depois avança sozinho
         blockRepeatCount++;
         if(blockRepeatCount >= repeatTarget){
           if(currentBlock < totalBlocks - 1){ seekToBlock(currentBlock + 1, true); }
-          else{ blockRepeatCount = 0; engine.seekTo(currentBlock * blockSeconds); }
+          else{ blockRepeatCount = 0; engine.seekTo(unitStart(currentBlock)); }
         } else {
-          engine.seekTo(currentBlock * blockSeconds);
+          engine.seekTo(unitStart(currentBlock));
         }
       } else if(playbackMode === 'continuous'){
-        // Modo 03: toca direto, sem pausas nem loops — só atualiza qual bloco está passando
+        // Modo 03: toca direto, só atualiza qual bloco/frase está passando
         if(currentBlock < totalBlocks - 1){ advanceBlockDisplay(currentBlock + 1); }
       }
     }
@@ -780,7 +989,7 @@ const defPopup = document.getElementById('defPopup');
 const defPopupBody = document.getElementById('defPopupBody');
 document.getElementById('defPopupClose').addEventListener('click', () => defPopup.classList.remove('show'));
 
-function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function renderHoverableEnglish(text){
   const container = document.getElementById('readEnText');
@@ -807,7 +1016,7 @@ function positionPopup(anchorEl){
 }
 
 function renderDefinition(word, data){
-  if(!data){ defPopupBody.innerHTML = `<div class="dp-word">${word}</div><div class="dp-def">Não encontrei esse termo — pode ser gíria, nome próprio ou expressão composta (tenta buscar só uma das palavras, se for expressão).</div>`; return; }
+  if(!data){ defPopupBody.innerHTML = `<div class="dp-word">${escapeHtml(word)}</div><div class="dp-def">Não encontrei esse termo — pode ser gíria, nome próprio ou expressão composta (tenta buscar só uma das palavras, se for expressão).</div>`; return; }
   const entry = data[0];
   const phoneticObj = (entry.phonetics || []).find(p => p.text);
   const phonetic = entry.phonetic || (phoneticObj && phoneticObj.text) || '';
@@ -897,7 +1106,6 @@ let deferredInstallPrompt = null;
 if(!isStandalone()){
   installBtn.style.display = 'inline-flex';
 }
-
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredInstallPrompt = e;
