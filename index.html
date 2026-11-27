@@ -500,12 +500,24 @@ function loadYoutubeVideo(raw, blockSecondsInput){
   resetForNewSource(id);
   showFrame('yt');
   localDB.set('lastSource', JSON.stringify({ mode: 'youtube', url: raw, blockSeconds }));
-  if(typeof YT === 'undefined' || !YT.Player){
-    showMsg('ytMsg', 'O player do YouTube ainda não carregou. Verifique a conexão ou desative bloqueadores de anúncio/rastreamento e tente de novo.');
+  const shell = document.getElementById('playerShell');
+  shell.classList.add('active');
+  showMsg('ytMsg', 'Carregando o player do YouTube...');
+  waitForYT(id, 0);
+  setTimeout(() => shell.scrollIntoView({ behavior:'smooth', block:'start' }), 300);
+}
+
+function waitForYT(id, tries){
+  if(typeof YT !== 'undefined' && YT.Player){
+    hideMsg('ytMsg');
+    startYtPlayer(id);
     return;
   }
-  if(!ytApiReady){ pendingVideoId = id; }
-  else { startYtPlayer(id); }
+  if(tries > 40){
+    showMsg('ytMsg', 'O player do YouTube não carregou. Desative bloqueadores de anúncio para este site e recarregue a página.');
+    return;
+  }
+  setTimeout(() => waitForYT(id, tries + 1), 250);
 }
 
 document.getElementById('loadYtBtn').addEventListener('click', () => {
@@ -656,7 +668,6 @@ function openFromLibrary(item){
   document.getElementById('urlInput').value = item.url;
   loadYoutubeVideo(item.url, item.blockSeconds || 10);
   renderLibrary();
-  setTimeout(() => document.getElementById('playerShell').scrollIntoView({ behavior:'smooth', block:'start' }), 350);
 }
 function renameInLibrary(item){
   const n = prompt('Nome do vídeo:', item.title || '');
