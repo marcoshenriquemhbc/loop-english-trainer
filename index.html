@@ -271,6 +271,8 @@
     <div class="pt-wrap" id="ptWrap">
       <span class="field-label">Player PT: na engrenagem, escolha "Português (BR)" uma vez</span>
       <div class="video-frame pt-frame"><div id="player-pt-mount"></div></div>
+      <span class="field-label" style="margin-top:10px;">Ajuste da faixa PT (segundos)</span>
+      <input type="number" id="ptOffsetInput" value="0" step="0.1" style="width:90px;">
     </div>
 
     <div class="status-bar">
@@ -880,7 +882,6 @@ async function autoTranslate(){
   const segs = segments;
   const lines = segs.map((_, i) => (ptLines[i] || ''));
   let failedReason = '';
-  let translatedNow = 0;
 
   for(let i = 0; i < segs.length; i++){
     if(key !== currentKey) break;          // trocou de vídeo no meio: para
@@ -891,7 +892,6 @@ async function autoTranslate(){
       const out = [];
       for(const p of parts){ out.push(await translateChunk(p)); await sleep(200); }
       lines[i] = out.join(' ').trim();
-      translatedNow++;
     }catch(e){
       failedReason = String(e.message || e);
       break;
@@ -1177,6 +1177,11 @@ function advanceBlockDisplay(index){
 }
 
 /* ----- modo EN ↔ PT: dois players com o mesmo vídeo, um mudo por vez ----- */
+const ptOffsetEl = document.getElementById('ptOffsetInput');
+ptOffsetEl.value = localDB.get('ptOffset') || '0';
+ptOffsetEl.addEventListener('change', () => localDB.set('ptOffset', ptOffsetEl.value));
+function ptOffset(){ return parseFloat(ptOffsetEl.value) || 0; }
+
 function activeBiPlayer(){ return biPhase === 'en' ? ytPlayer : ytPtPlayer; }
 
 function playBi(phase){
@@ -1186,7 +1191,7 @@ function playBi(phase){
   const off = phase === 'en' ? ytPtPlayer : ytPlayer;
   off.pauseVideo(); off.mute();
   on.unMute(); on.setPlaybackRate(currentRate);
-  on.seekTo(unitStart(currentBlock), true);
+  on.seekTo(unitStart(currentBlock) + (phase === 'pt' ? ptOffset() : 0), true);
   on.playVideo();
 }
 
@@ -1243,8 +1248,10 @@ document.getElementById('repeatBtn').addEventListener('click', () => seekToBlock
 document.getElementById('playPauseBtn').addEventListener('click', () => {
   if(!engine) return;
   if(playbackMode === 'bilingual'){
+    if(!ptReady) return;
     const p = activeBiPlayer();
-    if(p.getPlayerState() === YT.PlayerState.PLAYING) p.pauseVideo(); else p.playVideo();
+    if(p.getPlayerState() === YT.PlayerState.PLAYING){ p.pauseVideo(); }
+    else { playBi(biPhase); }
     return;
   }
   if(engine.isPlaying()) engine.pause(); else engine.play();
